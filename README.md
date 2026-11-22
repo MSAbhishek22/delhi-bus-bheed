@@ -1,9 +1,11 @@
 # Kitni Bheed Hai? — a crowdedness check for Delhi buses
 
+**Live app: https://delhi-bus-bheed.netlify.app**
+
+Pick a Delhi bus route and the hour you want to travel, and the app tells you how crowded that route usually is at that hour — a crowdedness band worked out from real October 2026 e-ticket data (1,249 routes × 24 hours).
+
 **Team ABHI X AAYUSHI** — M S Abhishek (data model + app build) and Aayushi Goel (testing + review)
 **Delhi Transport Stack Hackathon — Problem 2: Crowdedness-aware journey planner**
-
-Live app: https://delhi-bus-bheed.netlify.app
 
 ## Problem
 
