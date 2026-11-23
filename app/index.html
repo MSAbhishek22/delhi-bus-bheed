@@ -3,410 +3,777 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kitni Bheed Hai? — Delhi Bus Crowdedness Check</title>
-<meta name="description" content="Pick a Delhi bus route and an hour. See how crowded that bus usually is at that time, from a full month of real ticket data.">
+<title>Delhi Bus Bheed — the city's bus day, replayed</title>
+<meta name="description" content="A living pattern-twin of Delhi's bus network, built from a full month of real e-ticket data. Watch the city's crowd rise and fall, then plan your journey around it.">
 <style>
-  /* ============ Swiss minimalism base + glassmorphism cards ============ */
+  /* ===== Phase 2 identity: "the city as a departure board" =====
+     Warm paper page, one deep ink-green board, mono figures.
+     Motion: transform + opacity only. */
   :root{
-    --ink:#16161a;
-    --ink-soft:#3c3c43;
-    --paper:#f4f3ef;
-    --red:#e2001a;            /* Swiss accent */
-    --band-b:#d92b20;         /* bahut bheed */
-    --band-k:#e79a1e;         /* khadi bheed */
-    --band-a:#2f9e5f;         /* aaram se seat milegi */
-    --glass:rgba(255,255,255,.66);
-    --glass-strong:rgba(255,255,255,.82);
-    --glass-border:rgba(255,255,255,.75);
-    --hairline:rgba(22,22,26,.14);
-    --shadow:0 18px 50px rgba(22,22,26,.13), 0 3px 10px rgba(22,22,26,.07);
-    --radius:20px;
+    --paper:#f5f1e8;
+    --paper-2:#efe9db;
+    --ink:#14201a;
+    --ink-soft:#4c5a52;
+    --hairline:rgba(20,32,26,.16);
+    --board:#0d1512;
+    --board-2:#122019;
+    --phosphor:#57d992;
+    --board-text:#dcebe2;
+    --board-soft:#8fb3a1;
+    --band-b:#cf2a1e;
+    --band-k:#c07f0d;
+    --band-a:#22784a;
+    --band-b-lt:#ff7a6b;
+    --band-k-lt:#ffb84d;
+    --band-a-lt:#57d992;
+    --accent:#cf2a1e;
+    --radius:16px;
+    --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+    --sans:"Helvetica Neue",Helvetica,Arial,"Segoe UI",sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html{-webkit-text-size-adjust:100%}
-  body{
-    font-family:"Helvetica Neue",Helvetica,Arial,"Segoe UI",sans-serif;
-    background:var(--paper);
-    color:var(--ink);
-    line-height:1.45;
-    min-height:100vh;
-    overflow-x:hidden;
-  }
-  /* soft colour fields behind the glass (transform-animated only) */
-  .blob{position:fixed;border-radius:50%;filter:blur(70px);opacity:.5;pointer-events:none;z-index:0;will-change:transform}
-  .blob-1{width:420px;height:420px;background:#ffd9a8;top:-140px;right:-120px;animation:drift1 26s ease-in-out infinite alternate}
-  .blob-2{width:380px;height:380px;background:#ffc9c4;bottom:-160px;left:-120px;animation:drift2 32s ease-in-out infinite alternate}
-  .blob-3{width:260px;height:260px;background:#bfe6cd;top:38%;left:55%;animation:drift1 38s ease-in-out infinite alternate-reverse}
-  @keyframes drift1{from{transform:translate(0,0)}to{transform:translate(-46px,34px)}}
-  @keyframes drift2{from{transform:translate(0,0)}to{transform:translate(40px,-30px)}}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.5;overflow-x:hidden}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 64px}
 
-  .wrap{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:28px 18px 56px}
+  /* scroll reveal (GSAP-style rhythm, no library) */
+  .rise{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
+  .rise.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{animation:none !important;transition:none !important}
+    .rise{opacity:1;transform:none}
+  }
+  body.low-motion *,body.low-motion *::before,body.low-motion *::after{animation:none !important;transition:none !important}
+  body.low-motion .rise{opacity:1;transform:none}
+  body.low-motion{scroll-behavior:auto}
 
-  /* ============ Header (Swiss: hard grid, big type, one red rule) ============ */
-  header{border-top:6px solid var(--ink);padding-top:18px}
-  .eyebrow{
-    font-size:.72rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
-    color:var(--ink-soft);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  /* ============ Top strip ============ */
+  .topstrip{
+    display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:14px 0 0;font-size:.78rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);
   }
-  .eyebrow .dot{color:var(--red)}
-  h1{
-    font-size:clamp(2.6rem,9vw,4.6rem);line-height:.98;font-weight:800;
-    letter-spacing:-.02em;margin:14px 0 10px;
+  .topstrip .dot{color:var(--accent)}
+  .motion-toggle{
+    font:inherit;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    padding:7px 13px;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;transition:background .15s ease,color .15s ease;
   }
-  h1 .accent{color:var(--red)}
-  .lede{font-size:clamp(1rem,3.4vw,1.15rem);color:var(--ink-soft);max-width:34em}
-  .lede strong{color:var(--ink)}
+  .motion-toggle .tdot{width:9px;height:9px;border-radius:50%;background:var(--ink-soft);flex:none}
+  .motion-toggle[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .motion-toggle[aria-pressed="true"] .tdot{background:var(--phosphor)}
+  .motion-toggle:hover{transform:translateY(-1px)}
 
-  /* ============ Glass cards ============ */
-  .card{
-    background:var(--glass);
-    -webkit-backdrop-filter:blur(18px) saturate(1.5);
-    backdrop-filter:blur(18px) saturate(1.5);
-    border:1px solid var(--glass-border);
-    border-radius:var(--radius);
-    box-shadow:var(--shadow);
-    padding:22px 20px;
-    margin-top:22px;
+  /* ============ Hero ============ */
+  header.hero{border-top:6px solid var(--ink);margin-top:14px;padding-top:30px}
+  .hero h1{font-size:clamp(2.7rem,7.5vw,5.2rem);line-height:.98;font-weight:800;letter-spacing:-.025em;max-width:12em}
+  .hero h1 .accent{color:var(--accent)}
+  .hero .lede{font-size:clamp(1.02rem,2.6vw,1.22rem);color:var(--ink-soft);max-width:38em;margin-top:16px}
+  .hero .lede strong{color:var(--ink)}
+  .hero-stats{display:flex;gap:0;flex-wrap:wrap;margin-top:28px;border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline)}
+  .hero-stats .stat{padding:14px 22px 14px 0;margin-right:22px}
+  .hero-stats .stat .num{font-family:var(--mono);font-size:1.55rem;font-weight:700;letter-spacing:-.02em}
+  .hero-stats .stat .lbl{font-size:.8rem;color:var(--ink-soft);max-width:15em}
+  .hero-cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+  .btn{
+    font:inherit;font-weight:700;font-size:1rem;cursor:pointer;text-decoration:none;
+    padding:13px 22px;border-radius:999px;border:2px solid var(--ink);display:inline-block;
+    transition:transform .15s ease,background .15s ease,color .15s ease;
   }
-  .card h2{
-    font-size:.78rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--ink-soft);margin-bottom:14px;display:flex;align-items:center;gap:10px;
-  }
-  .card h2::after{content:"";flex:1;height:1px;background:var(--hairline)}
+  .btn:hover{transform:translateY(-2px)}
+  .btn-solid{background:var(--ink);color:#fff}
+  .btn-ghost{background:transparent;color:var(--ink)}
 
+  /* ============ Sections ============ */
+  section.block{margin-top:64px}
+  .sec-label{font-size:.74rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);display:flex;align-items:center;gap:12px}
+  .sec-label::after{content:"";flex:1;height:1px;background:var(--hairline)}
+  .sec-title{font-size:clamp(1.7rem,4.4vw,2.5rem);font-weight:800;letter-spacing:-.02em;line-height:1.08;margin-top:12px;max-width:22em}
+  .sec-sub{color:var(--ink-soft);max-width:40em;margin-top:10px}
+  .cards3{display:grid;grid-template-columns:1fr;gap:16px;margin-top:26px}
+  @media(min-width:820px){.cards3{grid-template-columns:repeat(3,1fr)}}
+  .pcard{background:#fff;border:1px solid var(--hairline);border-radius:var(--radius);padding:22px 20px}
+  .pcard .pnum{font-family:var(--mono);font-size:.85rem;font-weight:700;color:var(--accent);letter-spacing:.1em}
+  .pcard h3{font-size:1.18rem;font-weight:800;letter-spacing:-.01em;margin:8px 0 8px}
+  .pcard p{color:var(--ink-soft);font-size:.97rem}
+  .pcard p strong{color:var(--ink)}
+
+  /* ============ The board (twin) ============ */
+  .board{
+    background:var(--board);color:var(--board-text);border-radius:22px;margin-top:26px;
+    padding:22px 20px 18px;box-shadow:0 24px 60px rgba(13,21,18,.35);
+  }
+  @media(min-width:820px){.board{padding:28px 30px 22px}}
+  .board-head{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:flex-start}
+  .board h2{font-size:clamp(1.4rem,3.6vw,2rem);font-weight:800;letter-spacing:-.015em;line-height:1.1}
+  .sim-label{
+    display:inline-block;margin-top:10px;font-family:var(--mono);font-size:.74rem;font-weight:700;
+    letter-spacing:.14em;text-transform:uppercase;color:#0d1512;background:var(--phosphor);
+    padding:5px 10px;border-radius:6px;
+  }
+  .board-note{color:var(--board-soft);font-size:.9rem;max-width:34em;margin-top:10px}
+  .clockbox{text-align:right;min-width:210px}
+  .clock{font-family:var(--mono);font-size:clamp(2.6rem,6vw,3.6rem);font-weight:700;line-height:1;color:#fff;letter-spacing:-.01em}
+  .clock small{display:block;font-size:.8rem;font-weight:400;color:var(--board-soft);letter-spacing:.06em;margin-top:6px}
+  .clock-controls{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
+  .cbtn{
+    font:inherit;font-family:var(--mono);font-size:.85rem;font-weight:700;cursor:pointer;
+    padding:8px 14px;border-radius:999px;border:1.5px solid var(--board-soft);background:transparent;color:var(--board-text);
+    transition:background .15s ease,color .15s ease,transform .15s ease;
+  }
+  .cbtn:hover{transform:translateY(-1px);border-color:#fff;color:#fff}
+  .cbtn.on{background:var(--phosphor);border-color:var(--phosphor);color:#0d1512}
+  .sim-slider-row{display:flex;align-items:center;gap:14px;margin-top:18px}
+  .sim-slider-row .tick{font-family:var(--mono);font-size:.72rem;color:var(--board-soft);white-space:nowrap}
+  input[type=range].sim-range{
+    flex:1;appearance:none;-webkit-appearance:none;height:6px;border-radius:3px;outline:none;cursor:pointer;
+    background:linear-gradient(90deg,var(--band-a-lt),var(--band-k-lt) 38%,var(--band-b-lt) 42%,var(--band-b-lt) 55%,var(--band-k-lt) 72%,var(--band-a-lt));
+  }
+  input[type=range].sim-range::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;border:3px solid var(--board);box-shadow:0 0 0 2px var(--phosphor);cursor:grab}
+  input[type=range].sim-range::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--board);box-shadow:0 0 0 2px var(--phosphor);cursor:grab}
+  .board-stats{display:flex;gap:26px;flex-wrap:wrap;margin-top:16px}
+  .board-stats .bs .num{font-family:var(--mono);font-size:1.3rem;font-weight:700;color:#fff}
+  .board-stats .bs .lbl{font-size:.76rem;color:var(--board-soft);letter-spacing:.06em;text-transform:uppercase}
+  .twin-stage{margin-top:14px;background:var(--board-2);border:1px solid rgba(87,217,146,.16);border-radius:14px;position:relative;overflow:hidden}
+  #twinSvg{display:block;width:100%;height:auto;touch-action:none;cursor:grab}
+  #twinSvg:active{cursor:grabbing}
+  .flow-line{stroke:#9fd8bb;stroke-linecap:round}
+  .node{cursor:pointer;outline:none}
+  .node circle.core{stroke:rgba(13,21,18,.85);stroke-width:1.5}
+  .node text{font-family:var(--sans);font-size:12.5px;font-weight:700;fill:var(--board-text);paint-order:stroke;stroke:rgba(13,21,18,.9);stroke-width:3.5px;pointer-events:none}
+  .node:focus-visible circle.core{stroke:#fff;stroke-width:3}
+  .node .pulse{fill:none;stroke-width:2;opacity:0;transform-box:fill-box;transform-origin:center}
+  .node.pulsing .pulse{animation:pulse 0.9s ease-out}
+  @keyframes pulse{0%{opacity:.85;transform:scale(.4)}100%{opacity:0;transform:scale(1.9)}}
+  .zoomctl{position:absolute;top:10px;right:10px;display:flex;gap:6px}
+  .zoomctl button{
+    font:inherit;font-family:var(--mono);font-weight:700;width:34px;height:34px;border-radius:9px;cursor:pointer;
+    border:1px solid rgba(87,217,146,.4);background:rgba(13,21,18,.85);color:var(--board-text);font-size:1rem;line-height:1;
+  }
+  .zoomctl button:hover{border-color:#fff;color:#fff}
+  .board-legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:.82rem;color:var(--board-soft)}
+  .board-legend span{display:inline-flex;align-items:center;gap:7px}
+  .swatch{width:13px;height:13px;border-radius:4px;display:inline-block;flex:none}
+  .sw-b{background:var(--band-b)}.sw-k{background:#e79a1e}.sw-a{background:var(--band-a)}
+  .board .sw-b{background:var(--band-b-lt)}.board .sw-k{background:var(--band-k-lt)}.board .sw-a{background:var(--band-a-lt)}
+  .stop-panel{
+    margin-top:14px;border:1px solid rgba(87,217,146,.25);border-radius:14px;padding:16px 18px;background:rgba(87,217,146,.05);
+    display:none;
+  }
+  .stop-panel.open{display:block}
+  .stop-panel h3{font-size:1.15rem;font-weight:800}
+  .stop-panel .sp-meta{font-family:var(--mono);font-size:.86rem;color:var(--board-soft);margin-top:3px}
+  .stop-panel .sp-routes{margin-top:12px;display:flex;flex-direction:column;gap:7px}
+  .sp-route{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;
+    font:inherit;color:var(--board-text);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);
+    border-radius:10px;padding:9px 13px;cursor:pointer;transition:border-color .15s ease,transform .15s ease;
+  }
+  .sp-route:hover{border-color:var(--phosphor);transform:translateY(-1px)}
+  .sp-route .rn{font-weight:700}
+  .sp-route .rm{font-family:var(--mono);font-size:.8rem;color:var(--board-soft)}
+  .bandchip{font-family:var(--mono);font-size:.7rem;font-weight:700;letter-spacing:.05em;padding:3px 8px;border-radius:999px;white-space:nowrap}
+  .bandchip.b-b{background:rgba(207,42,30,.16);color:#ff8d80}
+  .bandchip.b-k{background:rgba(231,154,30,.16);color:#ffc266}
+  .bandchip.b-a{background:rgba(47,158,95,.18);color:#6fe3a5}
+  .planner .bandchip.b-b,.outcome .bandchip.b-b{background:rgba(207,42,30,.12);color:var(--band-b)}
+  .planner .bandchip.b-k,.outcome .bandchip.b-k{background:rgba(192,127,13,.13);color:var(--band-k)}
+  .planner .bandchip.b-a,.outcome .bandchip.b-a{background:rgba(34,120,74,.12);color:var(--band-a)}
+  .board-loading{padding:34px 10px;text-align:center;color:var(--board-soft);font-family:var(--mono);font-size:.9rem}
+
+  /* ============ Planner ============ */
+  .planner-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:26px}
+  @media(min-width:960px){.planner-grid{grid-template-columns:400px 1fr}}
+  .card{background:#fff;border:1px solid var(--hairline);border-radius:var(--radius);padding:22px 20px}
+  .card h3{font-size:.76rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .card h3::after{content:"";flex:1;height:1px;background:var(--hairline)}
   label.field-label{display:block;font-weight:700;font-size:.95rem;margin-bottom:8px}
   label.field-label span{font-weight:400;color:var(--ink-soft);font-size:.85rem}
-
-  /* route search */
   .search-box{position:relative}
   #routeSearch{
-    width:100%;font:inherit;font-size:1.15rem;font-weight:600;
-    padding:14px 16px;border:2px solid var(--ink);border-radius:14px;
-    background:var(--glass-strong);color:var(--ink);outline:none;
-    transition:box-shadow .18s ease;
+    width:100%;font:inherit;font-size:1.12rem;font-weight:600;padding:13px 15px;border:2px solid var(--ink);
+    border-radius:12px;background:#fff;color:var(--ink);outline:none;transition:box-shadow .18s ease;
   }
-  #routeSearch:focus{box-shadow:0 0 0 4px rgba(226,0,26,.22)}
-  #routeSearch::placeholder{color:#8a8a90;font-weight:400}
+  #routeSearch:focus{box-shadow:0 0 0 4px rgba(207,42,30,.2)}
+  #routeSearch::placeholder{color:#9aa39d;font-weight:400}
   #routeResults{
-    position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;
-    background:var(--glass-strong);
-    -webkit-backdrop-filter:blur(20px) saturate(1.5);
-    backdrop-filter:blur(20px) saturate(1.5);
-    border:1px solid var(--glass-border);border-radius:14px;box-shadow:var(--shadow);
-    overflow:hidden;display:none;max-height:308px;overflow-y:auto;
+    position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;background:#fff;border:1px solid var(--hairline);
+    border-radius:12px;box-shadow:0 18px 44px rgba(20,32,26,.16);overflow:hidden;display:none;max-height:308px;overflow-y:auto;
   }
   #routeResults.open{display:block}
-  .route-option{
-    display:flex;justify-content:space-between;align-items:baseline;gap:12px;width:100%;
-    padding:11px 16px;background:none;border:none;border-bottom:1px solid var(--hairline);
-    font:inherit;text-align:left;cursor:pointer;color:var(--ink);
-  }
+  .route-option{display:flex;justify-content:space-between;align-items:baseline;gap:12px;width:100%;padding:11px 15px;background:none;border:none;border-bottom:1px solid var(--hairline);font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
   .route-option:last-child{border-bottom:none}
-  .route-option:hover,.route-option.active{background:rgba(226,0,26,.08)}
-  .route-option .rname{font-weight:700;font-size:1.02rem}
-  .route-option .rtotal{font-size:.8rem;color:var(--ink-soft);white-space:nowrap}
-  .no-match{padding:12px 16px;color:var(--ink-soft);font-size:.92rem}
-
+  .route-option:hover{background:rgba(207,42,30,.07)}
+  .route-option .rname{font-weight:700}
+  .route-option .rtotal{font-size:.78rem;color:var(--ink-soft);white-space:nowrap;font-family:var(--mono)}
+  .no-match{padding:12px 15px;color:var(--ink-soft);font-size:.92rem}
   .chips-label{font-size:.82rem;color:var(--ink-soft);margin:16px 0 8px}
   .chips{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{
-    font:inherit;font-weight:700;font-size:.92rem;cursor:pointer;
-    padding:8px 14px;border-radius:999px;border:1.5px solid var(--ink);
-    background:transparent;color:var(--ink);
-    transition:transform .15s ease, background .15s ease, color .15s ease;
-  }
+  .chip{font:inherit;font-weight:700;font-size:.9rem;cursor:pointer;padding:7px 13px;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);transition:transform .15s ease,background .15s ease,color .15s ease}
   .chip:hover{transform:translateY(-2px)}
   .chip.selected{background:var(--ink);color:#fff}
   .route-meta{margin-top:14px;font-size:.9rem;color:var(--ink-soft)}
   .route-meta strong{color:var(--ink)}
-
-  /* hour picker */
-  .hour-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-  .hour-big{
-    font-size:clamp(2.2rem,8vw,3.2rem);font-weight:800;letter-spacing:-.02em;line-height:1;min-width:3.4em;
+  .divider{height:1px;background:var(--hairline);margin:20px 0}
+  select.stop-select{
+    width:100%;font:inherit;font-size:1rem;font-weight:600;padding:12px 13px;border:2px solid var(--ink);
+    border-radius:12px;background:#fff;color:var(--ink);outline:none;
   }
-  .hour-big small{display:block;font-size:.82rem;font-weight:400;letter-spacing:0;color:var(--ink-soft);margin-top:5px}
-  .hour-controls{flex:1;min-width:200px}
-  input[type=range]{
-    width:100%;appearance:none;-webkit-appearance:none;height:6px;border-radius:3px;
-    background:linear-gradient(90deg,var(--band-a),var(--band-k) 45%,var(--band-b) 75%,var(--band-k));
-    outline:none;cursor:pointer;
+  .from-list{margin-top:12px;display:flex;flex-direction:column;gap:7px}
+  .from-row{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;
+    background:var(--paper);border:1px solid var(--hairline);border-radius:10px;padding:9px 12px;cursor:pointer;color:var(--ink);
+    transition:transform .15s ease,border-color .15s ease;
   }
-  input[type=range]::-webkit-slider-thumb{
-    -webkit-appearance:none;width:28px;height:28px;border-radius:50%;
-    background:#fff;border:3px solid var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:grab;
-  }
-  input[type=range]::-moz-range-thumb{
-    width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid var(--ink);
-    box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:grab;
-  }
-  .hour-ticks{display:flex;justify-content:space-between;font-size:.72rem;color:var(--ink-soft);margin-top:6px}
-  .now-btn{
-    font:inherit;font-size:.85rem;font-weight:700;cursor:pointer;margin-top:10px;
-    padding:7px 13px;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);
-    transition:transform .15s ease, background .15s ease, color .15s ease;
-  }
-  .now-btn:hover{transform:translateY(-1px);background:var(--ink);color:#fff}
-
-  /* ============ Result ============ */
-  .result-card{overflow:hidden}
-  .result-inner{transition:opacity .22s ease, transform .22s ease}
+  .from-row:hover{transform:translateY(-1px);border-color:var(--ink)}
+  .from-row .rn{font-weight:700}
+  .from-row .rm{font-family:var(--mono);font-size:.78rem;color:var(--ink-soft)}
+  .from-empty{font-size:.9rem;color:var(--ink-soft)}
+  /* verdict */
+  .result-inner{transition:opacity .22s ease,transform .22s ease}
   .result-inner.swap{opacity:0;transform:translateY(8px)}
-  .meter{display:flex;gap:6px;margin-bottom:16px}
-  .meter i{flex:1;height:12px;border-radius:6px;background:rgba(22,22,26,.12)}
-  .meter i.on-b{background:var(--band-b)}
-  .meter i.on-k{background:var(--band-k)}
-  .meter i.on-a{background:var(--band-a)}
-  .band-name{
-    font-size:clamp(2.1rem,8.5vw,3.4rem);font-weight:800;line-height:1.05;letter-spacing:-.015em;
-  }
-  .band-name.c-b{color:var(--band-b)}
-  .band-name.c-k{color:#b97a0d}
-  .band-name.c-a{color:var(--band-a)}
-  .band-english{font-size:clamp(1rem,3.6vw,1.2rem);color:var(--ink-soft);margin-top:8px;max-width:32em}
-  .band-context{margin-top:14px;font-size:.95rem}
-  .band-context strong{font-weight:700}
-
-  .suggestion{
-    margin-top:18px;border-radius:14px;padding:14px 16px;font-size:.98rem;
-    background:rgba(255,255,255,.55);border:1px dashed rgba(22,22,26,.35);
-  }
-  .suggestion .sug-title{font-weight:700;display:block;margin-bottom:3px}
-  .suggestion.good{border:1.5px solid var(--band-a);background:rgba(47,158,95,.10)}
-
-  /* ============ 24-hour strip ============ */
-  .strip{display:grid;grid-template-columns:repeat(12,1fr);gap:6px}
-  .cell{
-    font:inherit;cursor:pointer;border:none;border-radius:10px;
-    padding:8px 0 6px;text-align:center;color:#fff;
-    transition:transform .15s ease, box-shadow .15s ease;
-  }
-  .cell .ch{display:block;font-size:.78rem;font-weight:700;line-height:1}
-  .cell .cb{display:block;font-size:.58rem;font-weight:700;letter-spacing:.04em;margin-top:3px;opacity:.92}
-  .cell.b-b{background:var(--band-b)}
-  .cell.b-k{background:var(--band-k)}
-  .cell.b-a{background:var(--band-a)}
+  .meter{display:flex;gap:6px;margin-bottom:14px}
+  .meter i{flex:1;height:12px;border-radius:6px;background:rgba(20,32,26,.1)}
+  .meter i.on-b{background:var(--band-b)}.meter i.on-k{background:#e79a1e}.meter i.on-a{background:var(--band-a)}
+  .band-name{font-size:clamp(2rem,6vw,3.1rem);font-weight:800;line-height:1.05;letter-spacing:-.015em}
+  .band-name.c-b{color:var(--band-b)}.band-name.c-k{color:var(--band-k)}.band-name.c-a{color:var(--band-a)}
+  .band-english{font-size:clamp(.98rem,3vw,1.12rem);color:var(--ink-soft);margin-top:7px;max-width:32em}
+  .band-context{margin-top:12px;font-size:.95rem}
+  /* curve */
+  .curve-wrap{margin-top:20px}
+  .curve-wrap .cv-title{font-size:.76rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px}
+  #curveSvg{width:100%;height:auto;display:block}
+  #curveSvg .bar{cursor:pointer}
+  #curveSvg .bar:hover{opacity:.75}
+  #curveSvg text{font-family:var(--mono);font-size:10px;fill:var(--ink-soft)}
+  .windows{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .windows .wlbl{font-size:.84rem;color:var(--ink-soft);font-weight:700}
+  .winchip{font:inherit;font-family:var(--mono);font-size:.82rem;font-weight:700;cursor:pointer;padding:6px 12px;border-radius:999px;border:1.5px solid var(--band-a);color:var(--band-a);background:rgba(34,120,74,.07);transition:transform .15s ease,background .15s ease}
+  .winchip:hover{transform:translateY(-1px);background:rgba(34,120,74,.15)}
+  .compare{margin-top:16px;border:1.5px dashed rgba(20,32,26,.3);border-radius:12px;padding:13px 15px;font-size:.95rem;background:var(--paper)}
+  .compare.good{border:1.5px solid var(--band-a);background:rgba(34,120,74,.07)}
+  .compare .cmp-title{font-weight:700;display:block;margin-bottom:3px}
+  .compare .mono{font-family:var(--mono);font-weight:700}
+  /* day strip */
+  .strip{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;margin-top:6px}
+  .cell{font:inherit;cursor:pointer;border:none;border-radius:10px;padding:8px 0 6px;text-align:center;color:#fff;transition:transform .15s ease,box-shadow .15s ease}
+  .cell .ch{display:block;font-size:.76rem;font-weight:700;line-height:1}
+  .cell .cb{display:block;font-size:.56rem;font-weight:700;letter-spacing:.04em;margin-top:3px;opacity:.92}
+  .cell.b-b{background:var(--band-b)}.cell.b-k{background:#e79a1e}.cell.b-a{background:var(--band-a)}
   .cell:hover{transform:translateY(-3px)}
-  .cell.selected{
-    transform:scale(1.14);
-    box-shadow:0 0 0 3px var(--paper), 0 0 0 5.5px var(--ink), 0 8px 16px rgba(22,22,26,.28);
-    position:relative;z-index:2;
-  }
-  .strip-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:.82rem;color:var(--ink-soft)}
+  .cell.selected{transform:scale(1.13);box-shadow:0 0 0 3px #fff,0 0 0 5.5px var(--ink),0 8px 16px rgba(20,32,26,.25);position:relative;z-index:2}
+  @media(min-width:720px){.strip{grid-template-columns:repeat(24,1fr);gap:5px}.cell .cb{display:none}}
+  .strip-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:13px;font-size:.82rem;color:var(--ink-soft)}
   .strip-legend span{display:inline-flex;align-items:center;gap:6px}
-  .swatch{width:13px;height:13px;border-radius:4px;display:inline-block}
-  .sw-b{background:var(--band-b)}.sw-k{background:var(--band-k)}.sw-a{background:var(--band-a)}
-
-  /* ============ How it works (plain Swiss block, no glass) ============ */
-  .how{
-    margin-top:26px;border-top:3px solid var(--ink);padding-top:18px;
+  /* what-if */
+  .whatif-box{margin-top:16px;border:1px solid var(--hairline);border-radius:12px;padding:15px 16px;background:var(--paper-2)}
+  .whatif-box h4{font-size:1rem;font-weight:800}
+  .whatif-box p{font-size:.9rem;color:var(--ink-soft);margin-top:5px}
+  .whatif-run{
+    font:inherit;font-weight:700;cursor:pointer;margin-top:11px;padding:10px 18px;border-radius:999px;
+    border:2px solid var(--ink);background:var(--ink);color:#fff;transition:transform .15s ease;
   }
-  .how h2{font-size:1.35rem;font-weight:800;letter-spacing:-.01em;margin-bottom:12px}
-  .how p{margin-bottom:11px;color:var(--ink-soft);max-width:38em}
+  .whatif-run:hover{transform:translateY(-1px)}
+  .wi-results{margin-top:14px;display:none}
+  .wi-results.open{display:block}
+  .wi-summary{font-size:.94rem}
+  .wi-table{width:100%;border-collapse:collapse;margin-top:11px;font-size:.9rem}
+  .wi-table th{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);text-align:left;padding:6px 8px;border-bottom:1.5px solid var(--hairline)}
+  .wi-table td{padding:7px 8px;border-bottom:1px solid var(--hairline);font-family:var(--mono);font-size:.86rem}
+  .wi-table td:first-child{font-family:var(--sans);font-weight:700}
+  .wi-note{font-size:.82rem;color:var(--ink-soft);margin-top:10px}
+
+  /* ============ Outcome / how ============ */
+  .outcome-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:26px}
+  @media(min-width:820px){.outcome-grid{grid-template-columns:repeat(4,1fr)}}
+  .ocard{background:var(--ink);color:#eef3ee;border-radius:var(--radius);padding:20px}
+  .ocard .num{font-family:var(--mono);font-size:1.7rem;font-weight:700;color:#fff}
+  .ocard .lbl{font-size:.85rem;color:#b9c8be;margin-top:5px}
+  .how{margin-top:64px;border-top:3px solid var(--ink);padding-top:20px}
+  .how h2{font-size:1.4rem;font-weight:800;letter-spacing:-.01em;margin-bottom:12px}
+  .how p{margin-bottom:11px;color:var(--ink-soft);max-width:44em}
   .how p strong{color:var(--ink)}
-  .how .big-num{font-weight:800;color:var(--ink)}
-
-  footer{
-    margin-top:34px;border-top:1px solid var(--hairline);padding-top:14px;
-    font-size:.82rem;color:var(--ink-soft);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
-  }
-
-  /* load error */
-  #loadError{
-    display:none;margin-top:22px;border:2px solid var(--band-b);border-radius:14px;
-    background:rgba(217,43,32,.07);padding:16px 18px;font-size:.95rem;
-  }
-  #loadError code{background:rgba(22,22,26,.08);padding:1px 6px;border-radius:5px;font-size:.88em}
+  footer{margin-top:40px;border-top:1px solid var(--hairline);padding-top:14px;font-size:.82rem;color:var(--ink-soft);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  #loadError{display:none;margin-top:22px;border:2px solid var(--band-b);border-radius:14px;background:rgba(207,42,30,.06);padding:16px 18px;font-size:.95rem}
+  #loadError code{background:rgba(20,32,26,.08);padding:1px 6px;border-radius:5px;font-size:.88em}
   .loading-note{margin-top:22px;color:var(--ink-soft);font-size:.95rem}
-
-  @media (min-width:720px){
-    .strip{grid-template-columns:repeat(24,1fr);gap:5px}
-    .cell .cb{display:none}
-    .card{padding:26px 28px}
-  }
-  @media (prefers-reduced-motion: reduce){
-    *,*::before,*::after{animation:none !important;transition:none !important}
-  }
 </style>
 </head>
 <body>
-  <div class="blob blob-1"></div>
-  <div class="blob blob-2"></div>
-  <div class="blob blob-3"></div>
+<div class="wrap">
 
-  <div class="wrap">
-    <header>
-      <div class="eyebrow">
-        <span>Delhi Transport Stack Hackathon <span class="dot">·</span> Problem 2</span>
-        <span>Prototype</span>
-      </div>
-      <h1>Kitni <span class="accent">bheed</span> hai?</h1>
-      <p class="lede">Pick your <strong>bus route</strong> and the <strong>hour you travel</strong>.
-      We will tell you how crowded that bus usually is at that time — worked out from
-      <strong>a full month of real Delhi bus ticket data</strong>.</p>
-    </header>
-
-    <div id="loadError" role="alert">
-      <strong>The route data could not be loaded.</strong><br>
-      If you opened this page by double-clicking the file, your browser has blocked the data file
-      (<code>crowdedness.json</code>) — that is a normal browser safety rule, not a broken page.
-      Start a small local server in this folder instead, then open the page from there:<br>
-      <code>python3 -m http.server</code> &nbsp;→&nbsp; open <code>http://localhost:8000</code>
-    </div>
-
-    <p class="loading-note" id="loadingNote">Loading route data…</p>
-
-    <main id="app" hidden>
-      <!-- Route + hour picker -->
-      <section class="card" aria-label="Choose route and hour">
-        <h2>Your journey</h2>
-
-        <label class="field-label" for="routeSearch">Bus route <span>— 1,249 routes, search by number</span></label>
-        <div class="search-box">
-          <input id="routeSearch" type="text" autocomplete="off" spellcheck="false"
-                 placeholder="Type a route number — try 717A, 729, 764…" aria-label="Search bus route">
-          <div id="routeResults" role="listbox" aria-label="Matching routes"></div>
-        </div>
-
-        <p class="chips-label">Busiest routes in October — tap one:</p>
-        <div class="chips" id="chips"></div>
-        <p class="route-meta" id="routeMeta"></p>
-
-        <div style="height:22px"></div>
-
-        <label class="field-label" for="hourSlider">Travel hour <span>— drag, or tap any hour in the day strip below</span></label>
-        <div class="hour-row">
-          <div class="hour-big"><span id="hourBig">–</span><small id="hourRange"></small></div>
-          <div class="hour-controls">
-            <input type="range" id="hourSlider" min="0" max="23" step="1" aria-label="Travel hour, 0 to 23">
-            <div class="hour-ticks"><span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11 PM</span></div>
-            <button class="now-btn" id="nowBtn" type="button">Use current hour</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Result -->
-      <section class="card result-card" aria-label="Crowdedness result">
-        <h2>How crowded</h2>
-        <div class="result-inner" id="resultInner" aria-live="polite">
-          <div class="meter" id="meter" aria-hidden="true"><i></i><i></i><i></i></div>
-          <div class="band-name" id="bandName">—</div>
-          <p class="band-english" id="bandEnglish"></p>
-          <p class="band-context" id="bandContext"></p>
-          <div class="suggestion" id="suggestion"></div>
-        </div>
-      </section>
-
-      <!-- Whole day strip -->
-      <section class="card" aria-label="Crowdedness through the day">
-        <h2>The whole day on this route</h2>
-        <div class="strip" id="strip"></div>
-        <div class="strip-legend">
-          <span><i class="swatch sw-b"></i> Bahut bheed — very crowded</span>
-          <span><i class="swatch sw-k"></i> Khadi bheed — fairly crowded</span>
-          <span><i class="swatch sw-a"></i> Aaram se seat milegi — quiet, seat likely</span>
-        </div>
-      </section>
-    </main>
-
-    <!-- How this works -->
-    <section class="how">
-      <h2>How this works</h2>
-      <p><strong>Where the numbers come from.</strong> Delhi's bus e-ticketing data for one full
-      month — October 2026. That is <span class="big-num">25.6 lakh tickets</span> (2,559,899 in all),
-      each with a route and a time. We counted how many people boarded every route in every hour of the day.</p>
-      <p><strong>How a band is decided.</strong> Each route is judged against <strong>its own day</strong>.
-      Its 8 busiest hours are marked "bahut bheed", the next 8 "khadi bheed", and its 8 quietest hours
-      "aaram se seat milegi". So the band answers the question a daily traveller actually asks:
-      <em>for this route, is this a busy hour or a quiet one?</em> A small route at its own busiest
-      hour still shows "bahut bheed" — because for that route, it is.</p>
-      <p><strong>What to keep in mind.</strong> E-tickets are only about 3–4% of all tickets sold,
-      so this is a sample, not a full count of every passenger. The bands show the <strong>usual pattern
-      from last October</strong>. They cannot see today's crowd, a cancelled bus, rain, or a festival day.
-      Treat this as a good guess from past data — <strong>not a live promise</strong>.</p>
-      <p><strong>What this is.</strong> A working prototype for the Delhi Transport Stack Hackathon,
-      Problem 2 — the crowdedness-aware journey planner. Built by Team ABHI X AAYUSHI.</p>
-    </section>
-
-    <footer>
-      <span>Data: Delhi bus e-ticketing, October 2026 · 1,249 routes</span>
-      <span>Prototype — patterns from past data, not live information</span>
-    </footer>
+  <div class="topstrip">
+    <span>Delhi Transport Stack <span class="dot">·</span> Problem 2 <span class="dot">·</span> Team ABHI X AAYUSHI</span>
+    <button class="motion-toggle" id="motionToggle" type="button" aria-pressed="false"><span class="tdot"></span>Low motion: off</button>
   </div>
 
-<script>
-(function(){
+  <!-- ================= HERO ================= -->
+  <header class="hero">
+    <h1>Delhi's bus day, <span class="accent">replayed.</span></h1>
+    <p class="lede">At the stop, you cannot tell what is coming — a bus with seats, or one too full to board.
+    We counted <strong>a full month of real Delhi bus tickets</strong> and built a twin of the network from them:
+    watch the city's crowd rise and fall through the day, then <strong>plan your journey around it</strong>.</p>
+    <div class="hero-stats">
+      <div class="stat"><div class="num">25,59,899</div><div class="lbl">real e-tickets counted, October 2026</div></div>
+      <div class="stat"><div class="num">1,249</div><div class="lbl">bus routes, each with its own daily rhythm</div></div>
+      <div class="stat"><div class="num">7,148</div><div class="lbl">boarding stops in the data</div></div>
+      <div class="stat"><div class="num">9 AM</div><div class="lbl">the network's busiest hour of the day</div></div>
+    </div>
+    <div class="hero-cta">
+      <a class="btn btn-solid" href="#twin">Watch the city breathe</a>
+      <a class="btn btn-ghost" href="#planner">Plan a journey</a>
+    </div>
+  </header>
+
+  <!-- ================= PROBLEM ================= -->
+  <section class="block rise" aria-label="The problem">
+    <div class="sec-label">The problem</div>
+    <h2 class="sec-title">You find out how crowded the bus is when it is already in front of you.</h2>
+    <div class="cards3">
+      <div class="pcard">
+        <div class="pnum">01</div>
+        <h3>No warning at the stop</h3>
+        <p>The next bus may have seats free, or no room to stand. You learn which one it is
+        <strong>when it pulls up</strong> — too late to leave earlier, wait for the next one, or pick another route.</p>
+      </div>
+      <div class="pcard">
+        <div class="pnum">02</div>
+        <h3>Every route has its own rush</h3>
+        <p>Route 717A peaks at 9 in the morning. Another route peaks at 6. A single city-wide
+        "peak hours" warning <strong>does not fit any of them well</strong> — the crowd has to be read route by route, hour by hour.</p>
+      </div>
+      <div class="pcard">
+        <div class="pnum">03</div>
+        <h3>One bad hour spreads</h3>
+        <p>When a busy route fails, its riders do not vanish. They land on the other routes
+        from the same stops — and today <strong>nobody can see where that load will go</strong> before it happens.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SOLUTION ================= -->
+  <section class="block rise" aria-label="What we built">
+    <div class="sec-label">What we built</div>
+    <h2 class="sec-title">A pattern-twin of the bus network, and a planner that thinks in hours.</h2>
+    <p class="sec-sub">Three steps: count a real month, replay it as a living day, and plan around what the replay shows.</p>
+    <div class="cards3">
+      <div class="pcard">
+        <div class="pnum">Step 1</div>
+        <h3>Count a real month</h3>
+        <p>Every e-ticket from October 2026 — route, boarding stop, destination, hour —
+        added up into <strong>routes × hours, stops × hours, and the real flows between stops</strong>.</p>
+      </div>
+      <div class="pcard">
+        <div class="pnum">Step 2</div>
+        <h3>Replay the day</h3>
+        <p>The board below plays a typical October day back, hour by hour. Stops swell and
+        calm with their real boarding counts. It is a <strong>pattern simulation</strong> — what usually
+        happens, not a live feed. It is labelled that way, always.</p>
+      </div>
+      <div class="pcard">
+        <div class="pnum">Step 3</div>
+        <h3>Plan around the crowd</h3>
+        <p>Pick a route and an hour. See the verdict, the full crowding curve, the quiet
+        windows — and for the busiest routes, <strong>what happens to the load if that route stops</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TWIN ================= -->
+  <section class="block" id="twin" aria-label="Network twin">
+    <div class="sec-label">The twin</div>
+    <h2 class="sec-title">The city, breathing on schedule.</h2>
+    <div class="board rise">
+      <div class="board-head">
+        <div>
+          <h2>Delhi bus network — a typical October day</h2>
+          <span class="sim-label">Pattern simulation · Oct 2026 e-ticket data · Not live</span>
+          <p class="board-note">The 110 busiest boarding stops and the strongest real passenger flows
+          between them. Stops are placed by how passengers move, <strong>not by geography</strong> — the ticket
+          data has stop names, not coordinates. Bigger and redder means more crowded for that stop at this hour.</p>
+        </div>
+        <div class="clockbox">
+          <div class="clock"><span id="clockTime">–</span><small id="clockBand">simulated hour</small></div>
+          <div class="clock-controls">
+            <button class="cbtn" id="playBtn" type="button" aria-pressed="false">▶ Play the day</button>
+            <button class="cbtn" id="nowBtn2" type="button">This hour</button>
+          </div>
+        </div>
+      </div>
+      <div class="sim-slider-row">
+        <span class="tick">12 AM</span>
+        <input type="range" class="sim-range" id="simSlider" min="0" max="23" step="1" aria-label="Simulated hour, 0 to 23">
+        <span class="tick">11 PM</span>
+      </div>
+      <div class="board-stats">
+        <div class="bs"><div class="num" id="bsBoardings">–</div><div class="lbl">boardings this hour (Oct total)</div></div>
+        <div class="bs"><div class="num" id="bsBusiest">–</div><div class="lbl">busiest stop this hour</div></div>
+        <div class="bs"><div class="num" id="bsCrowded">–</div><div class="lbl">of 110 stops at their busiest band</div></div>
+      </div>
+      <div class="twin-stage">
+        <p class="board-loading" id="twinLoading">Loading the day's numbers…</p>
+        <svg id="twinSvg" viewBox="0 0 1160 640" role="group" aria-label="Schematic network of Delhi's busiest bus stops" hidden></svg>
+        <div class="zoomctl" id="zoomCtl" hidden>
+          <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
+          <button type="button" id="zoomOut" aria-label="Zoom out">−</button>
+          <button type="button" id="zoomReset" aria-label="Reset view">⌂</button>
+        </div>
+      </div>
+      <div class="board-legend">
+        <span><i class="swatch sw-b"></i> Bahut bheed — very crowded for this stop</span>
+        <span><i class="swatch sw-k"></i> Khadi bheed — fairly crowded</span>
+        <span><i class="swatch sw-a"></i> Aaram se seat milegi — quiet for this stop</span>
+        <span>Tap a stop to see its day. Drag to pan, + / − to zoom.</span>
+      </div>
+      <div class="stop-panel" id="stopPanel" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <div id="loadError" role="alert">
+    <strong>The route data could not be loaded.</strong><br>
+    If you opened this page by double-clicking the file, your browser has blocked the data files
+    (<code>crowdedness.json</code>, <code>twin.json</code>) — a normal browser safety rule, not a broken page.
+    Serve this folder over HTTP instead: <code>python3 -m http.server</code> → open <code>http://localhost:8000</code>
+  </div>
+  <p class="loading-note" id="loadingNote">Loading route data…</p>
+
+  <!-- ================= PLANNER ================= -->
+  <section class="block planner" id="planner" aria-label="Journey planner">
+    <div class="sec-label">The planner</div>
+    <h2 class="sec-title">Leave now, or leave later?</h2>
+    <p class="sec-sub">One clock runs the whole page: change the hour here and the twin above follows — and the other way round.</p>
+
+    <main id="app" hidden>
+      <div class="planner-grid">
+        <!-- Controls -->
+        <div class="card">
+          <h3>Your journey</h3>
+          <label class="field-label" for="routeSearch">Bus route <span>— 1,249 routes, search by number</span></label>
+          <div class="search-box">
+            <input id="routeSearch" type="text" autocomplete="off" spellcheck="false"
+                   placeholder="Type a route number — try 717A, 729, 764…" aria-label="Search bus route">
+            <div id="routeResults" role="listbox" aria-label="Matching routes"></div>
+          </div>
+          <p class="chips-label">Busiest routes in October — tap one:</p>
+          <div class="chips" id="chips"></div>
+          <p class="route-meta" id="routeMeta"></p>
+
+          <div class="divider"></div>
+
+          <label class="field-label" for="stopSelect">Or start from a stop <span>— the 110 busiest, quietest route first</span></label>
+          <select class="stop-select" id="stopSelect" aria-label="Choose a boarding stop"></select>
+          <div class="from-list" id="fromList"></div>
+
+          <div class="divider"></div>
+
+          <label class="field-label" for="hourSlider">Travel hour <span>— the same clock as the twin</span></label>
+          <div class="hour-row" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+            <div class="hour-big" style="font-family:var(--mono);font-size:clamp(2rem,7vw,2.9rem);font-weight:700;line-height:1;min-width:3.2em">
+              <span id="hourBig">–</span>
+              <small id="hourRange" style="display:block;font-family:var(--sans);font-size:.8rem;font-weight:400;color:var(--ink-soft);margin-top:5px"></small>
+            </div>
+            <div style="flex:1;min-width:190px">
+              <input type="range" id="hourSlider" min="0" max="23" step="1" aria-label="Travel hour, 0 to 23"
+                     style="width:100%;appearance:none;-webkit-appearance:none;height:6px;border-radius:3px;outline:none;cursor:pointer;background:linear-gradient(90deg,var(--band-a),#e79a1e 45%,var(--band-b) 75%,#e79a1e)">
+              <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--ink-soft);margin-top:6px;font-family:var(--mono)">
+                <span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11 PM</span>
+              </div>
+              <button class="chip" id="nowBtn" type="button" style="margin-top:10px">Use current hour</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Result -->
+        <div>
+          <div class="card" aria-label="Crowdedness result">
+            <h3>How crowded</h3>
+            <div class="result-inner" id="resultInner" aria-live="polite">
+              <div class="meter" id="meter" aria-hidden="true"><i></i><i></i><i></i></div>
+              <div class="band-name" id="bandName">—</div>
+              <p class="band-english" id="bandEnglish"></p>
+              <p class="band-context" id="bandContext"></p>
+              <div class="compare" id="compareBox"></div>
+            </div>
+            <div class="curve-wrap">
+              <div class="cv-title">Boardings through the day — tap a bar to jump to that hour</div>
+              <svg id="curveSvg" viewBox="0 0 720 168" role="group" aria-label="Crowding curve for the selected route"></svg>
+              <div class="windows" id="windows"></div>
+            </div>
+            <div class="whatif-box" id="whatifBox"></div>
+          </div>
+
+          <div class="card" style="margin-top:16px" aria-label="Crowdedness through the day">
+            <h3>The whole day on this route</h3>
+            <div class="strip" id="strip"></div>
+            <div class="strip-legend">
+              <span><i class="swatch sw-b"></i> Bahut bheed — very crowded</span>
+              <span><i class="swatch sw-k"></i> Khadi bheed — fairly crowded</span>
+              <span><i class="swatch sw-a"></i> Aaram se seat milegi — quiet, seat likely</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <!-- ================= OUTCOME ================= -->
+  <section class="block outcome rise" aria-label="What the data showed">
+    <div class="sec-label">Outcome so far</div>
+    <h2 class="sec-title">What a month of real tickets actually showed.</h2>
+    <div class="outcome-grid">
+      <div class="ocard"><div class="num">27,53,606</div><div class="lbl">boardings counted across the month — passengers, not just tickets</div></div>
+      <div class="ocard"><div class="num">3,74,218</div><div class="lbl">boardings in the 9 AM hour alone, summed over October — the day's peak</div></div>
+      <div class="ocard"><div class="num">2,57,437</div><div class="lbl">real stop-to-stop journeys in the data; the twin draws the 170 strongest</div></div>
+      <div class="ocard"><div class="num">Pass</div><div class="lbl">the organisers' spot-check: on the 3 busiest routes, peak hours land in the top band, midday does not</div></div>
+    </div>
+  </section>
+
+  <!-- ================= HOW / LIMITS ================= -->
+  <section class="how rise">
+    <h2>How this works — and where it stops</h2>
+    <p><strong>Where the numbers come from.</strong> Delhi's bus e-ticketing data for one full month —
+    October 2026: <strong>25,59,899 tickets</strong>. We added up the passengers on every ticket by route,
+    by boarding stop, and by hour, and counted the real journeys between stops.</p>
+    <p><strong>How a band is decided.</strong> Each route — and each stop on the twin — is judged against
+    <strong>its own day</strong>. Its 8 busiest hours are "bahut bheed", the next 8 "khadi bheed", and its
+    8 quietest "aaram se seat milegi". The band answers the question a daily traveller asks:
+    <em>for this route, is this a busy hour or a quiet one?</em></p>
+    <p><strong>How the twin is drawn.</strong> The ticket data names stops but carries no coordinates,
+    so the board is a <strong>schematic</strong>: a layout algorithm places stops close together when many
+    passengers travel between them. It shows the shape of the city's movement, not its geography.</p>
+    <p><strong>How the what-if works.</strong> For the 40 busiest routes, the app can stop a route for one
+    simulated hour. Its boardings from its five busiest boarding stops are shared out to the other routes
+    starting at those stops, in proportion to how many people those routes board there at that hour.
+    Boardings from the route's smaller stops are counted and reported as outside the model. It is a
+    simple, stated model — real riders may also wait, walk, or take the Metro.</p>
+    <p><strong>What to keep in mind.</strong> E-tickets are only about 3–4% of all tickets sold, so this is
+    a sample, not a full count. Everything here is the <strong>usual pattern from October 2026</strong>. It cannot
+    see today's crowd, a cancelled bus, rain, or a festival day. There are no live bus positions in this
+    data, and this page never pretends otherwise.</p>
+    <p><strong>What this is.</strong> A working prototype for the Delhi Transport Stack Hackathon,
+    Problem 2 — the crowdedness-aware journey planner. Built by Team ABHI X AAYUSHI.
+    Phase 1 (the planner) was submitted on 22 Nov 2026; Phase 2 adds the twin, the curve,
+    the quiet windows, the stop view and the what-if.</p>
+  </section>
+
+  <footer>
+    <span>Data: Delhi bus e-ticketing, October 2026 · 1,249 routes · 7,148 stops</span>
+    <span>Patterns from past data — not live information</span>
+  </footer>
+</div>
+
+<script id="logic">
+/* Pure logic — no DOM. Extracted and unit-tested by tests/test_logic.mjs. */
+var BheedLogic = (function(){
   "use strict";
+  var RANK = { A:0, K:1, B:2 };
 
-  /* ---------- Band definitions ---------- */
-  var BANDS = {
-    B: { name:"Bahut bheed",           cls:"c-b", filled:3,
-         english:"Very crowded for this route. Expect to stand, and the bus may feel packed." },
-    K: { name:"Khadi bheed",           cls:"c-k", filled:2,
-         english:"Fairly crowded. You will probably stand, but there should be room to breathe." },
-    A: { name:"Aaram se seat milegi",  cls:"c-a", filled:1,
-         english:"Quiet for this route. You should get a seat without much trouble." }
-  };
-  var RANK = { A:0, K:1, B:2 };   /* lower rank = quieter */
-
-  /* ---------- State ---------- */
-  var data = null;
-  var state = {
-    route: null,
-    hour: new Date().getHours()
-  };
-
-  /* ---------- Elements ---------- */
-  var el = {};
-  ["app","loadingNote","loadError","routeSearch","routeResults","chips","routeMeta",
-   "hourSlider","hourBig","hourRange","nowBtn","resultInner","meter","bandName",
-   "bandEnglish","bandContext","suggestion","strip"].forEach(function(id){ el[id] = document.getElementById(id); });
-
-  /* ---------- Helpers ---------- */
   function fmtHour(h){
     var hr = h % 12; if (hr === 0) hr = 12;
     return hr + (h < 12 ? " AM" : " PM");
   }
-  function fmtNum(n){ return n.toLocaleString("en-IN"); }
-  function bandAt(route, hour){ return data.routes[route].bands.charAt(hour); }
+  function fmtNum(n){ return Math.round(n).toLocaleString("en-IN"); }
 
-  /* ---------- Better-time suggestion ----------
-     Nearest hour within +/-3 with a strictly lower band.
-     If both directions tie at the same distance, both are named. */
-  function suggestionFor(route, hour){
-    var cur = bandAt(route, hour), curRank = RANK[cur];
+  /* Phase 1 band rule on any 24-hour series: rank hours busiest-first
+     (ties: earlier hour first); ranks 1-8 "B", 9-16 "K", 17-24 "A". */
+  function bandString(hours){
+    var order = [];
+    for (var h = 0; h < 24; h++) order.push(h);
+    order.sort(function(a, b){ return (hours[b] - hours[a]) || (a - b); });
+    var out = new Array(24);
+    order.forEach(function(h, rank){ out[h] = rank < 8 ? "B" : (rank < 16 ? "K" : "A"); });
+    return out.join("");
+  }
+  function bandAt(hours, h){ return bandString(hours).charAt(h); }
+  function bandAfterLoad(hours, h, extra){
+    var c = hours.slice(); c[h] += extra;
+    return bandString(c).charAt(h);
+  }
+
+  /* Contiguous runs of the quietest band ("A"), longest first. */
+  function bestWindows(bands){
+    var wins = [], start = null;
+    for (var h = 0; h <= 24; h++){
+      var isA = h < 24 && bands.charAt(h) === "A";
+      if (isA && start === null) start = h;
+      if (!isA && start !== null){ wins.push({ start:start, end:h - 1, len:h - start }); start = null; }
+    }
+    wins.sort(function(a, b){ return (b.len - a.len) || (a.start - b.start); });
+    return wins;
+  }
+
+  /* Phase 1 suggestion: nearest hour within +/-3 with a strictly lower band. */
+  function nearestQuieter(bands, hour, bandNames){
+    var curRank = RANK[bands.charAt(hour)];
     if (curRank === 0){
-      return { good:true,
-        title:"Already the quietest time",
+      return { good:true, title:"Already the quietest time",
         text:"This hour is already in this route's quietest band. There is no calmer time to shift to — this is as good as it gets." };
     }
     for (var d = 1; d <= 3; d++){
       var found = [];
       [hour - d, hour + d].forEach(function(h){
-        if (h >= 0 && h <= 23 && RANK[bandAt(route, h)] < curRank) found.push(h);
+        if (h >= 0 && h <= 23 && RANK[bands.charAt(h)] < curRank) found.push(h);
       });
       if (found.length){
         var parts = found.map(function(h){
-          return fmtHour(h) + " (" + BANDS[bandAt(route, h)].name.toLowerCase() + ")";
+          return fmtHour(h) + " (" + bandNames[bands.charAt(h)].toLowerCase() + ")";
         });
-        return { good:true,
-          title:"A quieter time nearby",
+        return { good:true, title:"A quieter time nearby",
           text:"Try " + parts.join(" or ") + " instead — " +
                (found.length > 1 ? "both are" : "it is") +
                " usually calmer than " + fmtHour(hour) + " on this route." };
       }
     }
-    return { good:false,
-      title:"No quieter time nearby",
+    return { good:false, title:"No quieter time nearby",
       text:"Every hour within 3 hours either side is just as crowded on this route. " +
-           "If you can, look beyond that window in the day strip above — the quiet hours are marked green." };
+           "If you can, look beyond that window — the quiet windows are marked under the curve." };
   }
 
-  /* ---------- Rendering ---------- */
+  /* Leave-now-or-later: the least-boarded hour in a strictly quieter band.
+     Later hours are preferred; if none exist, the day's best is returned
+     flagged as earlier. Returns null when already in the quietest band or
+     when no quieter hour exists. */
+  function compareHours(hours, bands, hour){
+    var curRank = RANK[bands.charAt(hour)];
+    if (curRank === 0) return null;
+    var cands = [];
+    for (var h = 0; h < 24; h++) if (RANK[bands.charAt(h)] < curRank) cands.push(h);
+    if (!cands.length) return null;
+    var later = cands.filter(function(h){ return h > hour; });
+    var pool = later.length ? later : cands;
+    var best = null;
+    pool.forEach(function(h){
+      if (!best || hours[h] < hours[best] || (hours[h] === hours[best] && Math.abs(h - hour) < Math.abs(best - hour))) best = h;
+    });
+    return {
+      nowHour: hour, nowBoardings: hours[hour], nowBand: bands.charAt(hour),
+      bestHour: best, bestBoardings: hours[best], bestBand: bands.charAt(best),
+      isLater: best > hour,
+      dropPct: hours[hour] > 0 ? Math.round((hours[hour] - hours[best]) / hours[hour] * 100) : 0
+    };
+  }
+
+  /* Routes starting at a stop, quietest band first at `hour`,
+     then by boardings at that stop at that hour. */
+  function routesFromStop(stop, hour, routeBands){
+    return stop.routes.map(function(r){
+      return { route: r.route, atStop: r.hours[hour], total: r.total,
+               band: routeBands[r.route] ? routeBands[r.route].charAt(hour) : "A" };
+    }).sort(function(a, b){ return (RANK[a.band] - RANK[b.band]) || (b.atStop - a.atStop); });
+  }
+
+  /* The documented what-if (see model/TWIN_NOTES.md):
+     the disrupted route's boardings at `hour` from its top start stops are
+     split at each stop across the other routes starting there, in proportion
+     to their boardings at that stop at that hour. Boardings from the route's
+     other stops are reported as outside the model, never reassigned. */
+  function redistribute(whatifRoute, allRouteHours, allRouteBands, hour){
+    var total = allRouteHours[whatifRoute.route][hour];
+    var gained = {}, moved = 0, unassigned = 0, covered = 0;
+    var perStop = [];
+    whatifRoute.stops.forEach(function(s){
+      var share = s.hours[hour];
+      covered += share;
+      var altTotal = 0;
+      s.alts.forEach(function(a){ altTotal += a.hours[hour]; });
+      if (altTotal === 0){
+        unassigned += share;
+        perStop.push({ stop: s.stop, share: share, unassigned: share });
+        return;
+      }
+      s.alts.forEach(function(a){
+        gained[a.route] = (gained[a.route] || 0) + share * a.hours[hour] / altTotal;
+      });
+      moved += share;
+      perStop.push({ stop: s.stop, share: share, unassigned: 0 });
+    });
+    var rows = Object.keys(gained).map(function(r){
+      var before = allRouteHours[r][hour];
+      var extra = gained[r];
+      return { route: r, before: before, extra: extra, after: before + extra,
+               bandBefore: allRouteBands[r].charAt(hour),
+               bandAfter: bandAfterLoad(allRouteHours[r], hour, extra) };
+    }).sort(function(a, b){ return b.extra - a.extra; });
+    return { total: total, covered: covered, rest: total - covered,
+             moved: moved, unassigned: unassigned, rows: rows, perStop: perStop };
+  }
+
+  return { RANK: RANK, fmtHour: fmtHour, fmtNum: fmtNum,
+           bandString: bandString, bandAt: bandAt, bandAfterLoad: bandAfterLoad,
+           bestWindows: bestWindows, nearestQuieter: nearestQuieter,
+           compareHours: compareHours, routesFromStop: routesFromStop,
+           redistribute: redistribute };
+})();
+</script>
+
+<style>
+  /* planner range thumbs (the board slider has its own rules above) */
+  #hourSlider::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;border:3px solid var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:grab}
+  #hourSlider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:grab}
+</style>
+<script>
+(function(){
+  "use strict";
+  var L = BheedLogic;
+
+  var BANDS = {
+    B: { name:"Bahut bheed", cls:"c-b", filled:3,
+         english:"Very crowded for this route. Expect to stand, and the bus may feel packed." },
+    K: { name:"Khadi bheed", cls:"c-k", filled:2,
+         english:"Fairly crowded. You will probably stand, but there should be room to breathe." },
+    A: { name:"Aaram se seat milegi", cls:"c-a", filled:1,
+         english:"Quiet for this route. You should get a seat without much trouble." }
+  };
+  var BAND_NAMES = { B:"Bahut bheed", K:"Khadi bheed", A:"Aaram se seat milegi" };
+
+  var crowd = null;        /* crowdedness.json (Phase 1) */
+  var twin = null;         /* twin.json (Phase 2) */
+  var routeBands = {};     /* route -> 24-char band string */
+  var cityBands = null;
+  var state = { route:null, hour:new Date().getHours(), stop:null, playing:false };
+  var view = { x:0, y:0, w:1160, h:640 };
+  var timer = null;
+
+  var el = {};
+  ["app","loadingNote","loadError","routeSearch","routeResults","chips","routeMeta",
+   "hourSlider","hourBig","hourRange","nowBtn","resultInner","meter","bandName",
+   "bandEnglish","bandContext","compareBox","strip","stopSelect","fromList",
+   "curveSvg","windows","whatifBox","clockTime","clockBand","playBtn","nowBtn2",
+   "simSlider","bsBoardings","bsBusiest","bsCrowded","twinSvg","twinLoading",
+   "zoomCtl","zoomIn","zoomOut","zoomReset","stopPanel","motionToggle"]
+   .forEach(function(id){ el[id] = document.getElementById(id); });
+
+  function bandAt(route, hour){ return routeBands[route].charAt(hour); }
+  function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+
+  /* ================= Hour (one shared clock) ================= */
+  function renderHour(){
+    el.hourBig.textContent = L.fmtHour(state.hour);
+    el.hourRange.textContent = "buses between " + L.fmtHour(state.hour) + " and " + L.fmtHour((state.hour + 1) % 24);
+    el.hourSlider.value = state.hour;
+    el.simSlider.value = state.hour;
+    el.clockTime.textContent = L.fmtHour(state.hour);
+    if (cityBands){
+      var cb = cityBands.charAt(state.hour);
+      el.clockBand.textContent = "simulated hour · the city is in a " +
+        (cb === "B" ? "very crowded" : cb === "K" ? "fairly crowded" : "quiet") + " stretch";
+    }
+  }
+
+  function setHour(h, fromPlay){
+    state.hour = ((h % 24) + 24) % 24;
+    renderHour();
+    if (crowd && state.route){ renderStrip(); renderResult(); renderCurveSel(); }
+    if (twin){ renderTwinHour(!!fromPlay); renderBoardStats(); renderFromList(); }
+    if (state.stop) renderStopPanel();
+    renderWhatIf();   /* resets to the prompt state for the new hour */
+  }
+
+  /* ================= Planner (Phase 1 core, kept) ================= */
   function renderRouteMeta(){
-    var r = data.routes[state.route];
-    el.routeMeta.innerHTML = "Route <strong>" + state.route + "</strong> · " +
-      "<strong>" + fmtNum(r.total) + "</strong> boardings counted on this route in October (from e-tickets).";
+    var r = crowd.routes[state.route];
+    el.routeMeta.innerHTML = "Route <strong>" + esc(state.route) + "</strong> · " +
+      "<strong>" + L.fmtNum(r.total) + "</strong> boardings counted on this route in October (from e-tickets).";
     document.querySelectorAll(".chip").forEach(function(c){
       c.classList.toggle("selected", c.textContent === state.route);
     });
@@ -415,16 +782,16 @@
 
   function renderStrip(){
     el.strip.innerHTML = "";
-    var bands = data.routes[state.route].bands;
+    var bands = routeBands[state.route];
     for (var h = 0; h < 24; h++){
       (function(h){
         var b = bands.charAt(h);
         var btn = document.createElement("button");
         btn.type = "button";
         btn.className = "cell b-" + b.toLowerCase() + (h === state.hour ? " selected" : "");
-        btn.setAttribute("aria-label", fmtHour(h) + ": " + BANDS[b].name);
+        btn.setAttribute("aria-label", L.fmtHour(h) + ": " + BANDS[b].name);
         btn.innerHTML = '<span class="ch">' + h + '</span><span class="cb">' + b + "</span>";
-        btn.addEventListener("click", function(){ setHour(h); });
+        btn.addEventListener("click", function(){ pausePlay(); setHour(h); });
         el.strip.appendChild(btn);
       })(h);
     }
@@ -436,51 +803,385 @@
     el.bandName.textContent = info.name;
     el.bandName.className = "band-name " + info.cls;
     el.bandEnglish.textContent = info.english;
-    el.bandContext.innerHTML = "Route <strong>" + state.route + "</strong> at <strong>" +
-      fmtHour(state.hour) + "</strong> — this is one of this route's " +
+    var ctx = "Route <strong>" + esc(state.route) + "</strong> at <strong>" + L.fmtHour(state.hour) +
+      "</strong> — this is one of this route's " +
       (b === "B" ? "8 busiest hours" : b === "K" ? "middle hours, neither peak nor quiet" : "8 quietest hours") +
       " of the day.";
-    var segs = el.meter.children;
-    for (var i = 0; i < 3; i++){
-      segs[i].className = i < info.filled ? ("on-" + b.toLowerCase()) : "";
+    if (twin && twin.route_hours[state.route]){
+      ctx += " About <strong>" + L.fmtNum(twin.route_hours[state.route][state.hour]) +
+             " boardings</strong> were counted in this hour across October.";
     }
-    var sug = suggestionFor(state.route, state.hour);
-    el.suggestion.className = "suggestion" + (sug.good ? " good" : "");
-    el.suggestion.innerHTML = '<span class="sug-title">' + sug.title + "</span>" + sug.text;
-  }
+    el.bandContext.innerHTML = ctx;
+    var segs = el.meter.children;
+    for (var i = 0; i < 3; i++) segs[i].className = i < info.filled ? ("on-" + b.toLowerCase()) : "";
 
-  function renderHour(){
-    el.hourBig.textContent = fmtHour(state.hour);
-    el.hourRange.textContent = "buses between " + fmtHour(state.hour) + " and " + fmtHour((state.hour + 1) % 24);
-    el.hourSlider.value = state.hour;
+    var bands = routeBands[state.route];
+    var sug = L.nearestQuieter(bands, state.hour, BAND_NAMES);
+    var html = '<span class="cmp-title">' + sug.title + "</span>" + sug.text;
+    var good = sug.good;
+    if (twin && twin.route_hours[state.route]){
+      var cmp = L.compareHours(twin.route_hours[state.route], bands, state.hour);
+      if (cmp){
+        good = true;
+        html += "<br>At <span class='mono'>" + L.fmtHour(cmp.nowHour) + "</span> this route carries about <span class='mono'>" +
+          L.fmtNum(cmp.nowBoardings) + "</span> boardings in the hour. " +
+          (cmp.isLater ? "Wait for " : "The day's calmer point is ") +
+          "<span class='mono'>" + L.fmtHour(cmp.bestHour) + "</span>: about <span class='mono'>" + L.fmtNum(cmp.bestBoardings) +
+          "</span> boardings (" + BAND_NAMES[cmp.bestBand].toLowerCase() + ") — roughly <span class='mono'>" +
+          cmp.dropPct + "%</span> fewer people in that hour.";
+      }
+    }
+    el.compareBox.className = "compare" + (good ? " good" : "");
+    el.compareBox.innerHTML = html;
   }
 
   function renderAll(animate){
     if (animate){
       el.resultInner.classList.add("swap");
       setTimeout(function(){
-        renderRouteMeta(); renderHour(); renderStrip(); renderResult();
+        renderRouteMeta(); renderHour(); renderStrip(); renderResult(); renderCurve(); renderWindows(); renderWhatIf();
         el.resultInner.classList.remove("swap");
       }, 180);
     } else {
-      renderRouteMeta(); renderHour(); renderStrip(); renderResult();
+      renderRouteMeta(); renderStrip(); renderResult(); renderCurve(); renderWindows(); renderWhatIf();
     }
   }
 
   function setRoute(route, animate){
-    if (!data || !data.routes[route]) return;
+    if (!crowd || !crowd.routes[route]) return;
     state.route = route;
     closeResults();
     renderAll(animate !== false);
   }
-  function setHour(h){
-    state.hour = h;
-    renderHour(); renderStrip(); renderResult();
+
+  /* ================= Curve + quiet windows ================= */
+  var NS = "http://www.w3.org/2000/svg";
+  function renderCurve(){
+    var svg = el.curveSvg;
+    svg.innerHTML = "";
+    if (!twin || !state.route || !twin.route_hours[state.route]) {
+      svg.innerHTML = '<text x="6" y="24">Loading the day\u2019s numbers\u2026</text>';
+      return;
+    }
+    var hours = twin.route_hours[state.route];
+    var bands = routeBands[state.route];
+    var max = Math.max.apply(null, hours) || 1;
+    var bw = 720 / 24;
+    for (var h = 0; h < 24; h++){
+      (function(h){
+        var bh = Math.max(3, hours[h] / max * 118);
+        var rect = document.createElementNS(NS, "rect");
+        rect.setAttribute("x", h * bw + 4); rect.setAttribute("y", 138 - bh);
+        rect.setAttribute("width", bw - 8); rect.setAttribute("height", bh);
+        rect.setAttribute("rx", 3);
+        rect.setAttribute("fill", bands.charAt(h) === "B" ? "#cf2a1e" : bands.charAt(h) === "K" ? "#e79a1e" : "#2f9e5f");
+        rect.setAttribute("class", "bar");
+        if (h === state.hour){ rect.setAttribute("stroke", "#14201a"); rect.setAttribute("stroke-width", "2.5"); }
+        var t = document.createElementNS(NS, "title");
+        t.textContent = L.fmtHour(h) + ": " + L.fmtNum(hours[h]) + " boardings in October — " + BAND_NAMES[bands.charAt(h)];
+        rect.appendChild(t);
+        rect.addEventListener("click", function(){ pausePlay(); setHour(h); });
+        svg.appendChild(rect);
+        if (h % 6 === 0){
+          var tx = document.createElementNS(NS, "text");
+          tx.setAttribute("x", h * bw + 4); tx.setAttribute("y", 156);
+          tx.textContent = L.fmtHour(h);
+          svg.appendChild(tx);
+        }
+        if (h === state.hour){
+          var tv = document.createElementNS(NS, "text");
+          tv.setAttribute("x", Math.min(h * bw + 4, 640)); tv.setAttribute("y", Math.max(12, 138 - bh - 8));
+          tv.setAttribute("style", "font-weight:700;fill:#14201a;font-size:12px");
+          tv.textContent = L.fmtNum(hours[h]);
+          svg.appendChild(tv);
+        }
+      })(h);
+    }
+  }
+  function renderCurveSel(){ renderCurve(); }
+
+  function renderWindows(){
+    var box = el.windows;
+    box.innerHTML = "";
+    if (!state.route) return;
+    var wins = L.bestWindows(routeBands[state.route]).slice(0, 3);
+    if (!wins.length) return;
+    var lbl = document.createElement("span");
+    lbl.className = "wlbl"; lbl.textContent = "Quiet windows:";
+    box.appendChild(lbl);
+    wins.forEach(function(w){
+      var c = document.createElement("button");
+      c.type = "button"; c.className = "winchip";
+      c.textContent = L.fmtHour(w.start) + " – " + L.fmtHour((w.end + 1) % 24);
+      c.setAttribute("aria-label", "Jump to quiet window starting " + L.fmtHour(w.start));
+      c.addEventListener("click", function(){ pausePlay(); setHour(w.start); });
+      box.appendChild(c);
+    });
   }
 
-  /* ---------- Route search ---------- */
-  function closeResults(){ el.routeResults.classList.remove("open"); el.routeResults.innerHTML = ""; }
+  /* ================= From a stop ================= */
+  function renderStopSelect(){
+    el.stopSelect.innerHTML = "";
+    var ph = document.createElement("option");
+    ph.value = ""; ph.textContent = "Choose a stop…";
+    el.stopSelect.appendChild(ph);
+    twin.stops.forEach(function(s, i){
+      var o = document.createElement("option");
+      o.value = i;
+      o.textContent = s.name + " — " + L.fmtNum(s.total) + " boardings in Oct";
+      el.stopSelect.appendChild(o);
+    });
+  }
 
+  function renderFromList(){
+    var box = el.fromList;
+    box.innerHTML = "";
+    if (!twin || state.stop === null || !twin.stops[state.stop]) return;
+    var stop = twin.stops[state.stop];
+    var rows = L.routesFromStop(stop, state.hour, routeBands);
+    if (!rows.length){
+      box.innerHTML = '<p class="from-empty">No routes in the data start here.</p>';
+      return;
+    }
+    rows.forEach(function(r){
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.className = "from-row";
+      btn.innerHTML = '<span><span class="rn">' + esc(r.route) + '</span> ' +
+        '<span class="bandchip b-' + r.band.toLowerCase() + '">' + BAND_NAMES[r.band] + '</span></span>' +
+        '<span class="rm">' + L.fmtNum(r.atStop) + " board here at " + L.fmtHour(state.hour) + "</span>";
+      btn.addEventListener("click", function(){
+        setRoute(r.route);
+        document.getElementById("planner").scrollIntoView({ behavior:"smooth", block:"start" });
+      });
+      box.appendChild(btn);
+    });
+  }
+
+  el.stopSelect.addEventListener("change", function(){
+    state.stop = el.stopSelect.value === "" ? null : parseInt(el.stopSelect.value, 10);
+    renderFromList();
+    if (state.stop !== null) selectStop(state.stop, false);
+  });
+
+  /* ================= What-if ================= */
+  function renderWhatIf(){
+    var box = el.whatifBox;
+    if (!twin || !state.route){ box.innerHTML = "<h4>What if this route stopped?</h4><p>Loading the day's numbers…</p>"; return; }
+    if (!twin.whatif[state.route]){
+      box.innerHTML = "<h4>What if this route stopped?</h4><p>The what-if is worked out for the " +
+        "40 busiest routes. Route <strong>" + esc(state.route) + "</strong> is not one of them — its stops are " +
+        "thinner in the ticket sample, and sharing its load out would be guesswork. We would rather say that plainly.</p>";
+      return;
+    }
+    box.innerHTML = "<h4>What if route " + esc(state.route) + " stopped for the " + L.fmtHour(state.hour) + " hour?</h4>" +
+      "<p>Its riders would not vanish. This shares its boardings from its five busiest boarding stops " +
+      "to the other routes starting at those stops, in proportion to how many people those routes board " +
+      "there at this hour. A simple model — the working is shown, and its limits are stated under the result.</p>" +
+      '<button class="whatif-run" id="whatifRun" type="button">Run the what-if for ' + L.fmtHour(state.hour) + "</button>" +
+      '<div class="wi-results" id="wiResults"></div>';
+    document.getElementById("whatifRun").addEventListener("click", runWhatIf);
+  }
+
+  function runWhatIf(){
+    var res = L.redistribute(
+      { route: state.route, stops: twin.whatif[state.route].stops },
+      twin.route_hours, routeBands, state.hour);
+    var box = document.getElementById("wiResults");
+    var html = '<p class="wi-summary">At ' + L.fmtHour(state.hour) + ", route <strong>" + esc(state.route) +
+      "</strong> carries about <strong>" + L.fmtNum(res.total) + "</strong> boardings in the hour. " +
+      "Of these, <strong>" + L.fmtNum(res.moved) + "</strong> move to other routes from the same stops" +
+      (res.unassigned > 0 ? ", <strong>" + L.fmtNum(res.unassigned) + "</strong> board at stops with no other route boarding at this hour" : "") +
+      (res.rest > 0 ? ", and <strong>" + L.fmtNum(res.rest) + "</strong> start at this route's smaller stops, which the model does not cover" : "") +
+      ".</p>";
+    if (res.rows.length){
+      html += '<table class="wi-table"><thead><tr><th>Route taking the load</th><th>Boardings now</th><th>Extra</th><th>New total</th><th>Band at ' + L.fmtHour(state.hour) + "</th></tr></thead><tbody>";
+      res.rows.slice(0, 6).forEach(function(r){
+        html += "<tr><td>" + esc(r.route) + "</td><td>" + L.fmtNum(r.before) + "</td><td>+" + L.fmtNum(r.extra) +
+          "</td><td>" + L.fmtNum(r.after) + "</td><td>" +
+          '<span class="bandchip b-' + r.bandBefore.toLowerCase() + '">' + BAND_NAMES[r.bandBefore] + "</span> → " +
+          '<span class="bandchip b-' + r.bandAfter.toLowerCase() + '">' + BAND_NAMES[r.bandAfter] + "</span></td></tr>";
+      });
+      html += "</tbody></table>";
+    }
+    html += '<p class="wi-note">How to read this: boardings are October totals for this hour, from the e-ticket sample. ' +
+      "The model moves people only to routes starting at the same stop, in proportion to those routes' own boardings there. " +
+      "It cannot see riders who would wait for the next hour, walk, or take the Metro — so treat the extra load as the most that could land, not a promise.</p>";
+    box.innerHTML = html;
+    box.classList.add("open");
+  }
+
+  /* ================= Twin ================= */
+  var nodeEls = [], flowEls = [];
+  function buildTwin(){
+    var svg = el.twinSvg;
+    svg.innerHTML = "";
+    twin.flows.forEach(function(f){
+      var a = twin.stops[f.a], b = twin.stops[f.b];
+      var ln = document.createElementNS(NS, "line");
+      ln.setAttribute("x1", a.x); ln.setAttribute("y1", a.y);
+      ln.setAttribute("x2", b.x); ln.setAttribute("y2", b.y);
+      ln.setAttribute("class", "flow-line");
+      svg.appendChild(ln);
+      flowEls.push(ln);
+    });
+    twin.stops.forEach(function(s, i){
+      var g = document.createElementNS(NS, "g");
+      g.setAttribute("class", "node");
+      g.setAttribute("tabindex", "0");
+      g.setAttribute("role", "button");
+      g.setAttribute("transform", "translate(" + s.x + "," + s.y + ")");
+      g.setAttribute("aria-label", s.name + " — tap for its day");
+      var pulse = document.createElementNS(NS, "circle");
+      pulse.setAttribute("class", "pulse"); pulse.setAttribute("r", 14);
+      var core = document.createElementNS(NS, "circle");
+      core.setAttribute("class", "core"); core.setAttribute("r", 8);
+      g.appendChild(pulse); g.appendChild(core);
+      if (i < 16){
+        var tx = document.createElementNS(NS, "text");
+        tx.setAttribute("x", 13); tx.setAttribute("y", 4);
+        tx.textContent = s.name.length > 26 ? s.name.slice(0, 25) + "…" : s.name;
+        g.appendChild(tx);
+      }
+      g.addEventListener("click", function(){ selectStop(i, true); });
+      g.addEventListener("keydown", function(e){
+        if (e.key === "Enter" || e.key === " "){ e.preventDefault(); selectStop(i, true); }
+      });
+      svg.appendChild(g);
+      nodeEls.push({ g: g, core: core, pulse: pulse });
+    });
+    el.twinLoading.style.display = "none";
+    svg.hidden = false;
+    el.zoomCtl.hidden = false;
+    applyView();
+  }
+
+  var BAND_FILL = { B:"#ff7a6b", K:"#ffb84d", A:"#57d992" };
+  function renderTwinHour(pulse){
+    if (!twin) return;
+    var h = state.hour;
+    var maxStop = 1;
+    twin.stops.forEach(function(s){ if (s.hours[h] > maxStop) maxStop = s.hours[h]; });
+    twin.stops.forEach(function(s, i){
+      var r = 4.5 + Math.sqrt(s.hours[h] / maxStop) * 13;
+      nodeEls[i].core.setAttribute("r", r.toFixed(1));
+      nodeEls[i].core.setAttribute("fill", BAND_FILL[s.bands.charAt(h)]);
+      nodeEls[i].pulse.setAttribute("r", r.toFixed(1));
+      nodeEls[i].pulse.setAttribute("stroke", BAND_FILL[s.bands.charAt(h)]);
+      if (pulse && !document.body.classList.contains("low-motion")){
+        nodeEls[i].g.classList.remove("pulsing");
+        void nodeEls[i].g.getBBox;
+        nodeEls[i].g.classList.add("pulsing");
+      }
+      nodeEls[i].g.setAttribute("aria-label", s.name + " at " + L.fmtHour(h) + ": " +
+        L.fmtNum(s.hours[h]) + " boardings in October, " + BAND_NAMES[s.bands.charAt(h)]);
+    });
+    twin.flows.forEach(function(f, i){
+      var v = f.hours[h];
+      flowEls[i].setAttribute("stroke-width", (0.5 + Math.sqrt(v) * 0.5).toFixed(2));
+      flowEls[i].setAttribute("stroke-opacity", v === 0 ? 0.03 : Math.min(0.55, 0.08 + v / 30).toFixed(2));
+    });
+  }
+
+  function renderBoardStats(){
+    var h = state.hour;
+    el.bsBoardings.textContent = L.fmtNum(twin.city_hours[h]);
+    var best = 0;
+    twin.stops.forEach(function(s, i){ if (s.hours[h] > twin.stops[best].hours[h]) best = i; });
+    el.bsBusiest.textContent = twin.stops[best].name;
+    el.bsBusiest.style.fontSize = twin.stops[best].name.length > 22 ? "0.95rem" : "";
+    var crowded = twin.stops.filter(function(s){ return s.bands.charAt(h) === "B"; }).length;
+    el.bsCrowded.textContent = crowded + " of 110";
+  }
+
+  function selectStop(i, scroll){
+    state.stop = i;
+    el.stopSelect.value = String(i);
+    renderStopPanel();
+    renderFromList();
+    if (scroll) el.stopPanel.scrollIntoView({ behavior:"smooth", block:"nearest" });
+  }
+
+  function renderStopPanel(){
+    if (state.stop === null || !twin){ el.stopPanel.classList.remove("open"); return; }
+    var s = twin.stops[state.stop];
+    var h = state.hour;
+    var b = s.bands.charAt(h);
+    var rows = L.routesFromStop(s, h, routeBands);
+    var html = "<h3>" + esc(s.name) + "</h3>" +
+      '<p class="sp-meta">At ' + L.fmtHour(h) + ": " + L.fmtNum(s.hours[h]) + " boardings counted in October · " +
+      '<span class="bandchip b-' + b.toLowerCase() + '">' + BAND_NAMES[b] + "</span> · " +
+      L.fmtNum(s.total) + " boardings in the whole month</p>" +
+      '<div class="sp-routes">';
+    rows.forEach(function(r){
+      html += '<button type="button" class="sp-route" data-route="' + esc(r.route) + '">' +
+        '<span><span class="rn">Route ' + esc(r.route) + '</span> <span class="rm">' +
+        L.fmtNum(r.atStop) + " board here at " + L.fmtHour(h) + '</span></span>' +
+        '<span class="bandchip b-' + r.band.toLowerCase() + '">' + BAND_NAMES[r.band] + "</span></button>";
+    });
+    html += "</div>";
+    el.stopPanel.innerHTML = html;
+    el.stopPanel.classList.add("open");
+    el.stopPanel.querySelectorAll(".sp-route").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        setRoute(btn.getAttribute("data-route"));
+        document.getElementById("planner").scrollIntoView({ behavior:"smooth", block:"start" });
+      });
+    });
+  }
+
+  /* zoom + pan */
+  function applyView(){ el.twinSvg.setAttribute("viewBox", view.x + " " + view.y + " " + view.w + " " + view.h); }
+  function zoomBy(f){
+    var cx = view.x + view.w / 2, cy = view.y + view.h / 2;
+    var w = Math.min(1160, Math.max(220, view.w * f));
+    var h = w * 640 / 1160;
+    view.x = Math.min(Math.max(cx - w / 2, 0), 1160 - w);
+    view.y = Math.min(Math.max(cy - h / 2, 0), 640 - h);
+    view.w = w; view.h = h;
+    applyView();
+  }
+  el.zoomIn.addEventListener("click", function(){ zoomBy(0.72); });
+  el.zoomOut.addEventListener("click", function(){ zoomBy(1.38); });
+  el.zoomReset.addEventListener("click", function(){ view = { x:0, y:0, w:1160, h:640 }; applyView(); });
+  (function(){
+    var drag = null;
+    el.twinSvg.addEventListener("pointerdown", function(e){
+      drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y };
+      el.twinSvg.setPointerCapture(e.pointerId);
+    });
+    el.twinSvg.addEventListener("pointermove", function(e){
+      if (!drag) return;
+      var scale = view.w / el.twinSvg.clientWidth;
+      view.x = Math.min(Math.max(drag.vx - (e.clientX - drag.x) * scale, 0), 1160 - view.w);
+      view.y = Math.min(Math.max(drag.vy - (e.clientY - drag.y) * scale, 0), 640 - view.h);
+      applyView();
+    });
+    ["pointerup","pointercancel"].forEach(function(ev){
+      el.twinSvg.addEventListener(ev, function(){ drag = null; });
+    });
+  })();
+
+  /* ================= Play the day ================= */
+  function pausePlay(){
+    if (!state.playing) return;
+    state.playing = false;
+    clearInterval(timer); timer = null;
+    el.playBtn.textContent = "▶ Play the day";
+    el.playBtn.classList.remove("on");
+    el.playBtn.setAttribute("aria-pressed", "false");
+  }
+  el.playBtn.addEventListener("click", function(){
+    if (state.playing){ pausePlay(); return; }
+    state.playing = true;
+    el.playBtn.textContent = "❚❚ Pause";
+    el.playBtn.classList.add("on");
+    el.playBtn.setAttribute("aria-pressed", "true");
+    timer = setInterval(function(){ setHour(state.hour + 1, true); }, 1300);
+  });
+  el.nowBtn2.addEventListener("click", function(){ pausePlay(); setHour(new Date().getHours()); });
+
+  /* ================= Search + chips (Phase 1, kept) ================= */
+  function closeResults(){ el.routeResults.classList.remove("open"); el.routeResults.innerHTML = ""; }
   function showResults(list){
     el.routeResults.innerHTML = "";
     if (!list.length){
@@ -491,28 +1192,24 @@
     } else {
       list.slice(0, 12).forEach(function(name){
         var btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "route-option";
-        btn.setAttribute("role", "option");
-        btn.innerHTML = '<span class="rname">' + name + '</span><span class="rtotal">' +
-                        fmtNum(data.routes[name].total) + " boardings in Oct</span>";
+        btn.type = "button"; btn.className = "route-option"; btn.setAttribute("role", "option");
+        btn.innerHTML = '<span class="rname">' + esc(name) + '</span><span class="rtotal">' +
+                        L.fmtNum(crowd.routes[name].total) + " boardings in Oct</span>";
         btn.addEventListener("mousedown", function(e){ e.preventDefault(); setRoute(name); });
         el.routeResults.appendChild(btn);
       });
     }
     el.routeResults.classList.add("open");
   }
-
   el.routeSearch.addEventListener("input", function(){
     var q = el.routeSearch.value.trim().toLowerCase();
     if (!q){ closeResults(); return; }
-    var matches = data.route_names.filter(function(n){ return n.toLowerCase().indexOf(q) !== -1; });
-    /* exact/prefix matches first, then by boardings (busiest first) */
+    var matches = crowd.route_names.filter(function(n){ return n.toLowerCase().indexOf(q) !== -1; });
     matches.sort(function(a, b){
       var pa = a.toLowerCase().indexOf(q) === 0 ? 0 : 1;
       var pb = b.toLowerCase().indexOf(q) === 0 ? 0 : 1;
       if (pa !== pb) return pa - pb;
-      return data.routes[b].total - data.routes[a].total;
+      return crowd.routes[b].total - crowd.routes[a].total;
     });
     showResults(matches);
   });
@@ -528,40 +1225,70 @@
       el.routeSearch.dispatchEvent(new Event("input"));
     }
   });
-
-  /* ---------- Chips (top 10 busiest) ---------- */
   function renderChips(){
-    data.top_routes.slice(0, 10).forEach(function(name){
+    crowd.top_routes.slice(0, 10).forEach(function(name){
       var c = document.createElement("button");
-      c.type = "button";
-      c.className = "chip";
-      c.textContent = name;
+      c.type = "button"; c.className = "chip"; c.textContent = name;
       c.addEventListener("click", function(){ setRoute(name); });
       el.chips.appendChild(c);
     });
   }
+  el.hourSlider.addEventListener("input", function(){ pausePlay(); setHour(parseInt(el.hourSlider.value, 10)); });
+  el.simSlider.addEventListener("input", function(){ pausePlay(); setHour(parseInt(el.simSlider.value, 10)); });
+  el.nowBtn.addEventListener("click", function(){ pausePlay(); setHour(new Date().getHours()); });
 
-  /* ---------- Hour controls ---------- */
-  el.hourSlider.addEventListener("input", function(){ setHour(parseInt(el.hourSlider.value, 10)); });
-  el.nowBtn.addEventListener("click", function(){ setHour(new Date().getHours()); });
+  /* ================= Motion toggle + reveals ================= */
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function setLowMotion(on){
+    document.body.classList.toggle("low-motion", on);
+    el.motionToggle.setAttribute("aria-pressed", on ? "true" : "false");
+    el.motionToggle.lastChild.textContent = "Low motion: " + (on ? "on" : "off");
+  }
+  el.motionToggle.addEventListener("click", function(){
+    setLowMotion(!document.body.classList.contains("low-motion"));
+  });
+  if (reduced) setLowMotion(true);
+  if ("IntersectionObserver" in window && !reduced){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if (en.isIntersecting){ en.target.classList.add("in"); io.unobserve(en.target); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll(".rise").forEach(function(n){ io.observe(n); });
+  } else {
+    document.querySelectorAll(".rise").forEach(function(n){ n.classList.add("in"); });
+  }
 
-  /* ---------- Load data ---------- */
+  /* ================= Load ================= */
   fetch("crowdedness.json")
-    .then(function(res){
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return res.json();
-    })
+    .then(function(res){ if (!res.ok) throw new Error("HTTP " + res.status); return res.json(); })
     .then(function(json){
-      data = json;
+      crowd = json;
+      Object.keys(crowd.routes).forEach(function(r){ routeBands[r] = crowd.routes[r].bands; });
       el.loadingNote.style.display = "none";
       el.app.hidden = false;
       renderChips();
-      state.route = data.top_routes[0];   /* busiest route first: 717A */
+      state.route = crowd.top_routes[0];
+      renderHour();
       renderAll(false);
     })
     .catch(function(){
       el.loadingNote.style.display = "none";
       el.loadError.style.display = "block";
+    });
+
+  fetch("twin.json")
+    .then(function(res){ if (!res.ok) throw new Error("HTTP " + res.status); return res.json(); })
+    .then(function(json){
+      twin = json;
+      cityBands = L.bandString(twin.city_hours);
+      buildTwin();
+      renderStopSelect();
+      renderHour();
+      renderTwinHour(false);
+      renderBoardStats();
+      if (state.route){ renderResult(); renderCurve(); renderWhatIf(); }
+    })
+    .catch(function(){
+      el.twinLoading.textContent = "The twin's numbers could not be loaded. The planner below still works on the route data.";
     });
 })();
 </script>
