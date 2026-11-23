@@ -5,6 +5,20 @@ zip) with a real browser (Playwright, Chromium): **27/27 checks passed, 0
 console errors**, desktop 1280px + mobile 390px. Logic unit tests:
 `tests/test_logic.mjs` 10/10 · model tests: `model/test_twin.py` 13/13.
 
+**Mouse-click fix, 23 Nov 2026 (later the same day):** the Phase 2 demo
+recording exposed a real bug the first pass missed — a plain mouse click on
+a stop node never opened its panel, because the board's drag handler calls
+`setPointerCapture` on pointerdown, so the browser delivers the click to
+the SVG instead of the node (the first pass had only selected nodes by
+keyboard/DOM events). Fixed in `app/index.html`: the drag handler now
+remembers the press point and the node under it, and on pointerup a press
+that moved ≤4 px runs the same `selectStop` the keyboard Enter path runs.
+Re-verified with `qa/run_qa.py` (the project's browser QA, saved in this
+folder): **27/27 checks passed, 0 console errors**, now including a REAL
+mouse click (`page.mouse`, not a DOM click) on a stop node opening its
+panel, a real drag starting on a node that pans without selecting, and a
+mobile touch tap. Unit tests unchanged and still green: 13/13 + 10/10.
+
 | # | Control | Expected behaviour | Status |
 |---|---|---|---|
 | 1 | "Watch the city breathe" (hero) | Scrolls to the twin board | PASS (anchor, native) |
@@ -14,10 +28,10 @@ console errors**, desktop 1280px + mobile 390px. Logic unit tests:
 | 5 | ❚❚ Pause | Clock stops | PASS |
 | 6 | "This hour" (board) | Jumps the shared clock to the current real hour, pauses play | PASS (wired same as #9; hour sync verified) |
 | 7 | Simulation slider (board) | Sets the shared hour everywhere (board, planner, strip, curve) | PASS |
-| 8 | Twin stop node (click / Enter / Space) | Opens the stop panel with that stop's figures + routes at the current hour | PASS |
+| 8 | Twin stop node (mouse click / touch tap / Enter / Space) | Opens the stop panel with that stop's figures + routes at the current hour | PASS — real mouse click (`page.mouse`) re-verified 23 Nov after the pointer-capture fix; touch tap verified on mobile |
 | 9 | Stop panel route button | Loads that route in the planner and scrolls to it | PASS |
 | 10 | Zoom + / − / reset | viewBox zooms around centre; reset restores `0 0 1160 640` exactly | PASS |
-| 11 | Twin drag-pan | Dragging pans the viewBox, clamped to the board | PASS (pointer handlers; exercised in QA drag path) |
+| 11 | Twin drag-pan | Dragging pans the viewBox, clamped to the board; a drag starting on a stop node must NOT select it | PASS — asserted in `qa/run_qa.py`: viewBox pans, selection unchanged |
 | 12 | Route search input | Live filtered list, busiest first, prefix matches first | PASS |
 | 13 | Route search Enter / Escape | Enter picks the first match; Escape closes the list | PASS (Phase 1 logic, kept) |
 | 14 | Route option click | Loads the route; verdict, strip, curve, windows, what-if all update | PASS |

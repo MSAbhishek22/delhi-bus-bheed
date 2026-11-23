@@ -1145,8 +1145,20 @@ var BheedLogic = (function(){
   el.zoomReset.addEventListener("click", function(){ view = { x:0, y:0, w:1160, h:640 }; applyView(); });
   (function(){
     var drag = null;
+    function pressNodeIndex(target){
+      var n = target;
+      while (n && n !== el.twinSvg){
+        if (n.classList && n.classList.contains("node")){
+          for (var k = 0; k < nodeEls.length; k++) if (nodeEls[k].g === n) return k;
+          return -1;
+        }
+        n = n.parentNode;
+      }
+      return -1;
+    }
     el.twinSvg.addEventListener("pointerdown", function(e){
-      drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y };
+      drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y,
+               node: pressNodeIndex(e.target), button: e.button, t: Date.now() };
       el.twinSvg.setPointerCapture(e.pointerId);
     });
     el.twinSvg.addEventListener("pointermove", function(e){
@@ -1156,9 +1168,21 @@ var BheedLogic = (function(){
       view.y = Math.min(Math.max(drag.vy - (e.clientY - drag.y) * scale, 0), 640 - view.h);
       applyView();
     });
-    ["pointerup","pointercancel"].forEach(function(ev){
-      el.twinSvg.addEventListener(ev, function(){ drag = null; });
+    el.twinSvg.addEventListener("pointerup", function(e){
+      if (!drag) return;
+      var press = drag;
+      drag = null;
+      /* setPointerCapture (set on pointerdown so dragging can pan) makes
+         the browser deliver the click to the SVG, not to the stop node
+         under the pointer — so a node's own click handler never fires for
+         a real mouse or touch press. A press that barely moved is a click,
+         not a drag: run the same selection the keyboard Enter path runs. */
+      if (press.node >= 0 && press.button === 0 &&
+          Math.abs(e.clientX - press.x) <= 4 && Math.abs(e.clientY - press.y) <= 4){
+        selectStop(press.node, true);
+      }
     });
+    el.twinSvg.addEventListener("pointercancel", function(){ drag = null; });
   })();
 
   /* ================= Play the day ================= */
