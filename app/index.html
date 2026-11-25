@@ -298,6 +298,14 @@
   #loadError code{background:rgba(20,32,26,.08);padding:1px 6px;border-radius:5px;font-size:.88em}
   .loading-note{margin-top:22px;color:var(--ink-soft);font-size:.95rem}
 </style>
+<style>
+.hero3d-wrap{position:relative;height:340px;min-height:260px;overflow:hidden;background:#0b1020;border-radius:18px;margin:18px auto;max-width:1100px}
+.hero3d-wrap canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero3d-cap{position:absolute;left:18px;bottom:36px;margin:0;color:#fff;font:600 14px/1.4 system-ui,-apple-system,sans-serif;text-shadow:0 1px 8px rgba(0,0,0,.65);z-index:2}
+.hero3d-cue{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);margin:0;color:rgba(255,255,255,.92);font:600 13px/1.4 system-ui,-apple-system,sans-serif;letter-spacing:.08em;text-transform:uppercase;z-index:2;animation:hero3dbob 2s ease-in-out infinite}
+@keyframes hero3dbob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,4px)}}
+@media(max-width:640px){.hero3d-wrap{height:280px;margin:12px}}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -323,7 +331,82 @@
       <a class="btn btn-solid" href="#twin">Watch the city breathe</a>
       <a class="btn btn-ghost" href="#planner">Plan a journey</a>
     </div>
-  </header>
+  
+<section class="hero3d-wrap" aria-label="3D scene — The city, breathing in 3D — every bus, every hour.">
+  <canvas id="hero3d" aria-hidden="true"></canvas>
+  <p class="hero3d-cap">The city, breathing in 3D — every bus, every hour.</p>
+  <p class="hero3d-cue">&#8595; Scroll to explore</p>
+</section>
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+<script>
+/* J8 hero 3D — auto-starts on first load, no click needed. Three.js r149 CDN
+   with unpkg fallback. Pauses off-screen; renders one static frame when the
+   user prefers reduced motion. */
+(function(){
+  var canvas = document.getElementById('hero3d'); if(!canvas) return;
+  function start(){
+    if(!window.THREE){
+      var s = document.createElement('script');
+      s.src = 'https://unpkg.com/three@0.149.0/build/three.min.js';
+      s.onload = start; document.head.appendChild(s); return;
+    }
+    var THREE = window.THREE;
+    var wrap = canvas.parentElement;
+    var renderer = new THREE.WebGLRenderer({canvas: canvas, antialias: true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    var scene = new THREE.Scene(); scene.background = new THREE.Color(0x0d1526);
+    var camera = new THREE.PerspectiveCamera(45, 2, 0.1, 100);
+    camera.position.set(0, 6.5, 11);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    var dl = new THREE.DirectionalLight(0xffffff, 0.9); dl.position.set(4, 6, 6); scene.add(dl);
+    var dl2 = new THREE.DirectionalLight(0xffffff, 0.35); dl2.position.set(-5, -2, 4); scene.add(dl2);
+    camera.lookAt(0, 0, 0);
+    function rnd(i){ var x = Math.sin(i*12.9898)*43758.5453; return x - Math.floor(x); }
+    var city = new THREE.Group(); scene.add(city);
+    for(var gx=-4; gx<=4; gx++){ for(var gz=-2; gz<=2; gz++){
+      if(gz === 0) continue;
+      var h = 0.5 + rnd(gx*10+gz)*2.4;
+      var b = new THREE.Mesh(new THREE.BoxGeometry(1.1, h, 1.1),
+        new THREE.MeshStandardMaterial({color: 0x2e4a7a, roughness: 0.8}));
+      b.position.set(gx*1.6, h/2 - 1.4, gz*1.6); city.add(b);
+    }}
+    var road = new THREE.Mesh(new THREE.PlaneGeometry(15, 0.9),
+      new THREE.MeshStandardMaterial({color: 0x1b2436, roughness: 0.9}));
+    road.rotation.x = -Math.PI/2; road.position.y = -1.4; scene.add(road);
+    for(var s=-6; s<=6; s+=2){
+      var stop = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12),
+        new THREE.MeshStandardMaterial({color: 0xf2b705, emissive: 0xf2b705, emissiveIntensity: 0.6}));
+      stop.position.set(s, -1.25, 0.62); scene.add(stop);
+    }
+    var bus = new THREE.Group();
+    var body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.55, 0.5),
+      new THREE.MeshStandardMaterial({color: 0xd23b3b, roughness: 0.5}));
+    body.position.y = 0.28; bus.add(body);
+    var win = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.22, 0.52),
+      new THREE.MeshStandardMaterial({color: 0xbfe3ff, roughness: 0.2}));
+    win.position.y = 0.42; bus.add(win);
+    bus.position.y = -1.4; scene.add(bus);
+
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var visible = true;
+    function size(){ var w=wrap.clientWidth, h=wrap.clientHeight; if(!w||!h) return;
+      renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
+    size(); window.addEventListener('resize', size);
+    if('IntersectionObserver' in window){
+      new IntersectionObserver(function(en){ visible = en[0].isIntersecting; }, {threshold: 0}).observe(wrap);
+    }
+    var clock = new THREE.Clock();
+    function tick(t){ bus.position.x = -7 + ((t*1.4) % 14);
+    var glow = Math.floor((t*2) % 12);
+    if(city.children[glow]){ city.children[glow].material.emissive = new THREE.Color(0x223a66); } }
+    function frame(){ requestAnimationFrame(frame); if(!visible) return; tick(clock.getElapsedTime()); renderer.render(scene, camera); }
+    if(reduced){ tick(0.6); renderer.render(scene, camera); } else { frame(); }
+  }
+  if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', start); }
+  else { start(); }
+})();
+</script>
+</header>
 
   <!-- ================= PROBLEM ================= -->
   <section class="block rise" aria-label="The problem">
